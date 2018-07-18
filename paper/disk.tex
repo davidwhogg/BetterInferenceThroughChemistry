@@ -1,0 +1,80 @@
+% This file is part of the BetterInferenceThroughChemistry project.
+% Copyright 2018 the authors.
+
+% To-dos
+% - 
+
+% Style notes
+% - 
+
+\documentclass[modern]{aastex62}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage[sort&compress]{natbib}
+\usepackage[hang,flushmargin]{footmisc}
+
+% units macros
+\newcommand{\unit}[1]{\mathrm{#1}}
+\newcommand{\km}{\unit{km}}
+\newcommand{\s}{\unit{s}}
+\newcommand{\kms}{\km\,\s^{-1}}
+\newcommand{\pc}{\unit{pc}}
+\newcommand{\kpc}{\unit{kpc}}
+
+% math macros
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\T}{^{\mathsf{T}}}
+
+% text macros
+\newcommand{\documentname}{\textsl{Article}}
+\newcommand{\sectionname}{Section}
+\newcommand{\todo}[1]{\textcolor{red}{#1}}  % gotta have \usepackage{xcolor} in main doc or this won't work
+\newcommand{\acronym}[1]{{\small{#1}}}
+\newcommand{\project}[1]{\textsl{#1}}
+\newcommand{\foreign}[1]{\textsl{#1}}
+\newcommand{\HARPS}{\project{\acronym{HARPS}}}
+\newcommand{\HIRES}{\project{\acronym{HIRES}}}
+\newcommand{\RV}{\acronym{RV}}
+\newcommand{\CRLB}{\acronym{CRLB}}
+
+\setlength{\parindent}{1.4em} % trust in Hogg
+\shorttitle{element abundances ftw}
+\shortauthors{hogg}
+
+\begin{document}\sloppy\sloppypar\raggedbottom\frenchspacing % trust in Hogg
+\graphicspath{ {figures/} }
+\DeclareGraphicsExtensions{.pdf,.eps,.png}
+
+\title{\textbf{Identifying dynamical invariants by chemical invariance: \\
+               The vertical density structure of the Milky Way disk}}
+
+\author[0000-0003-2866-9403]{David W. Hogg}
+\affil{Center for Computational Astrophysics, Flatiron Institute, 162 Fifth Ave, New York, NY 10010, USA}
+\affil{Center for Cosmology and Particle Physics, Department of Physics, New York University, 726 Broadway, New York, NY 10003, USA}
+\affil{Center for Data Science, New York University, 60 Fifth Ave, New York, NY 10011, USA}
+\affil{Max-Planck-Institut f\"ur Astronomie, K\"onigstuhl 17, D-69117 Heidelberg}
+
+\author{Others}
+
+\begin{abstract}\noindent
+% context
+Extremely precise stellar radial velocity (\RV) measurements are a\ldots
+\end{abstract}
+
+\keywords{
+  foo
+  ---
+  bar
+}
+
+\section{Introduction}
+
+Hello world!
+
+\section{Method}
+
+\section{Data and results}
+
+\section{Discussion}
+
+\end{document}
