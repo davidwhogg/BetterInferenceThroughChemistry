@@ -1,4 +1,4 @@
-# BetterInferenceThroughChemistry
+# ChemicalTangents
 
 Using element-abundance information to inform dynamical inferences.
 
