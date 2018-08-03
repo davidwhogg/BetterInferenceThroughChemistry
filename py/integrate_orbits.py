@@ -50,23 +50,21 @@ if __name__ == "__main__":
     import pylab as plt
     plt.rc('text', usetex=True)
 
-    midplane = -25. * pc
-    surfacedensity = 70. * M_sun / (pc ** 2)
-    scaleheight = 150. * pc
-    pars = np.array([midplane, surfacedensity, scaleheight])
+    sigunits = 1. * M_sun / (pc ** 2)
     timestep = 1e5 * yr
     plt.clf()
-    for vmax in np.arange(1., 30., 2.):
-        zs, vs, phis = leapfrog(vmax * km / s, timestep, pure_exponential, pars)
-        zs = zs / (pc)
-        vs = vs / (km / s)
-        plt.plot(vs, zs, "k-", alpha=0.5, zorder=-10.)
-        plt.scatter(vs, zs, c=phis, s=1.)
+    for pars, plotstring in [
+        (np.array([-10. * pc, 50. * sigunits, 100 * pc]), "b-"),
+        (np.array([-10. * pc, 50. * sigunits, 200 * pc]), "r-"),
+        (np.array([-10. * pc, 70. * sigunits, 140 * pc]), "k-"),
+        ]:
+        for vmax in np.arange(1., 30., 2.):
+            zs, vs, phis = leapfrog(vmax * km / s, timestep, pure_exponential, pars)
+            zs = zs / (pc)
+            vs = vs / (km / s)
+            plt.plot(vs, zs, plotstring, alpha=0.5, zorder=-10.)
     plt.xlabel(r"$v_z$ [km\,s$^{-1}$]")
     plt.ylabel(r"$z$ [pc]")
     plt.xlim(np.min(vs), np.max(vs))
     plt.ylim(np.min(zs), np.max(zs))
     plt.savefig("eatme.png")
-    plt.xlim(vmax-1., vmax+1.)
-    plt.ylim((midplane / pc)-1., (midplane / pc)+1.)
-    plt.savefig("biteme.png")
