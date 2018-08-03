@@ -1,4 +1,16 @@
+"""
+This file is part of the ChemicalTangents project
+copyright 2018 David W. Hogg (NYU) (MPIA) (Flatiron)
+
+Strictly SI units, which is INSANE
+"""
 import numpy as np
+fourpiG = 4. * np.pi * 6.67408e-11 # m m m / kg / s / s
+pc = 3.0857e16 # m
+M_sun = 1.9891e30 # kg
+km = 1000. # m
+s = 1. # s
+yr = 365.25 * 24. * 3600. * s
 
 def leapfrog_step(z, v, dt, acceleration, pars):
     znew = z + v * dt
@@ -6,31 +18,55 @@ def leapfrog_step(z, v, dt, acceleration, pars):
     return znew, v + 0.5 * dv, v + dv
 
 def leapfrog(vmax, dt, acceleration, pars):
-    maxstep = 32768 * 16
+    """
+    assumes that pars[0] is the midplane location
+    """
+    midplane = pars[0]
+    maxstep = 32768
     zs = np.zeros(maxstep) - np.Inf
     vs = np.zeros(maxstep) - np.Inf
-    zs[0] = 0.
+    zs[0] = midplane
     vs[0] = vmax
     v = vs[0]
     for t in range(maxstep-1):
         zs[t + 1], vs[t + 1], v = leapfrog_step(zs[t], v, dt, acceleration, pars)
-        if zs[t] < 0. and zs[t+1] >= 0.:
+        if zs[t] < midplane and zs[t+1] >= midplane:
+            fraction = (zs[t+1] - midplane) / (zs[t+1] - zs[t])
+            print(zs[t], zs[t+1], fraction)
+            period = dt * (t + fraction)
+            phis = 2 * np.pi * np.arange(t+2) * dt / period
             break
-    return zs[:t+2], vs[:t+2]
+    return zs[:t+2], vs[:t+2], phis
+
+def pure_exponential(z, pars):
+    midplane, surfacedensity, scaleheight = pars
+    zprime = z - midplane
+    return -1. * fourpiG * surfacedensity * (1. - np.exp(-np.abs(zprime) / scaleheight)) * np.sign(zprime)
 
 def dummy(z, pars):
     return -1.5 * np.sign(z)
 
 if __name__ == "__main__":
     import pylab as plt
+    plt.rc('text', usetex=True)
 
-    pars = None
-    vmax = 25.
-    zs, vs = leapfrog(vmax, 0.01, dummy, pars)
-    print(len(zs), len(vs), min(zs))
-    print(zs[-3:], vs[-3:], min(zs))
-    plt.plot(vs, zs, "k-")
+    midplane = -25. * pc
+    surfacedensity = 70. * M_sun / (pc ** 2)
+    scaleheight = 150. * pc
+    pars = np.array([midplane, surfacedensity, scaleheight])
+    timestep = 1e5 * yr
+    plt.clf()
+    for vmax in np.arange(1., 30., 2.):
+        zs, vs, phis = leapfrog(vmax * km / s, timestep, pure_exponential, pars)
+        zs = zs / (pc)
+        vs = vs / (km / s)
+        plt.plot(vs, zs, "k-", alpha=0.5, zorder=-10.)
+        plt.scatter(vs, zs, c=phis, s=1.)
+    plt.xlabel(r"$v_z$ [km\,s$^{-1}$]")
+    plt.ylabel(r"$z$ [pc]")
+    plt.xlim(np.min(vs), np.max(vs))
+    plt.ylim(np.min(zs), np.max(zs))
     plt.savefig("eatme.png")
     plt.xlim(vmax-1., vmax+1.)
-    plt.ylim(-1., 1.)
+    plt.ylim((midplane / pc)-1., (midplane / pc)+1.)
     plt.savefig("biteme.png")
