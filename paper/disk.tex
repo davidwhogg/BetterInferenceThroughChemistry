@@ -110,20 +110,111 @@ This assumption is valuable, because it permits inference of the
 dynamics from the current phase-space snapshot, and it leads to a
 simplification in which the distribution function can depend only on
 dynamical invariants, such as the dynamical actions.
-Within this assumption-context, there are many methods available to the
+Within this assumption-context, there are several methods available to the
 contemporary astrophysical dynamicist:
-One is \emph{Jeans modeling}, in which relationships among second moments
-of stellar velocities are determined by a mixture of potential and
+One is through \emph{moment relationships}, in which the Jeans equation (relating second moments
+of stellar velocities) connects mean products of velocities by a mixture of potential and
 tracer-density derivatives.
-This has the great advantage that because it depends only on velocity
-moments, a survey selected in position-space can be used without much
+Jeans modeling has the great advantage that---because it depends only on velocity
+moments---a survey selected in position-space can be used without much
 (or maybe any) sensitivity to the (usually complex) survey selection
 function.
-Another method is full...HOGG
+It has the disadvantage that it inovlves second moments of the velocity
+field, which are noisily measured in any finite data set, and also a lossy
+compression of the relevant data.
+Another method is full \emph{forward modeling} of the position and velocity
+data, with both the dynamics and the phase-space distribution function
+(which, by assumption, depends only on dynamical invariants) and the
+force law or potential as free functions.
+This has the advantage that it exploits all of kinematic information in
+the data set.
+But it has the great disadvantages of requiring an accurate selection function
+and requiring optimization or marginalization of very flexible models for
+the distribution function, which is not just technically challenging (CITE BOVY HOGG), but it
+also puts the computational load on the part of the problem that is (usually)
+uninteresting.
+There are intermediate methods as well; in which some form of forward
+modeling is applied, but it is performed conditionally on position to reduce
+the sensitivity to the selection function (CITE).
+But suffice it to say that the old-school methods either strongly reduce the
+data through moments, or else require large computational efforts.
 
-How all these inferences are either high-order (like Jeans) or hard (like forward modeling).
+A great deal has changed recently.
+There are now million-star spectroscopic surveys that are returning not
+just kinematics but multi-element chemical abundances (HOGG CITE).
+These surveys have many motivations, but among them is the hope for
+chemical tagging (HOGG CITE), in which the (nearly) invariant surface
+abundances observable in a stellar atmosphere are used as tags that identify
+pairs or groups of stars that were born in the same molecular cloud at the same time,
+even if that time was far in the past.
+Because the chemical tagging approach capitalizes on element-abundance invariants
+rather than dynamical invariants, it could potentially permit dynamical inferences
+about the Milky Way that do not rely on the phase-mixed assumption underlying
+most old-school methods.
+Chemical tagging has not yet successfully revealed the origins of
+the Milky Way, but chemical tags are starting to be used to identify stars that have
+migrated far from their birth locations (CITE).
+In its most na\"ive or strongest form, chemical tagging works when high-dimensional
+element-abundance measurements create such a specific fingerprint for a star that it
+can only have one (or a few) possible birthplace events in the 3+1-dimensional past.
+That's an assumption, and one that is increasingly untenable (CITE).
+It is time to look at either softer versions of the chemical-tagging goal, or else
+look at other ways of exploiting the near-invariance of surface abundances.
 
-The element-abundance-invariance insight.
+The project reported here has the latter goal:
+We are going to use element-abundance invariances as a tool to discover dynamical
+invariants.
+Like the old-school methods we opened with, we will make the well-mixed assumption.
+But unlike the chemical-tagging approaches, we will not have to model or identify
+the origins of the stars we use.
+
+In a well-mixed population, stars are in a kinematic steady state:
+As time goes on, stars move along their orbits, but they don't change their dynamical
+invariants (by assumption!) and every location in angle (and by ``angle'' we mean the
+coordinate conjugate to action in action--angle coordinates) is equally likely, or
+equally probably populated in any snapshot.
+The chemical-tagging insight is that the stars also don't change their surface element
+abundances as they orbit.
+That is, in a well-mixed galaxy, the element abundances and the dynamical actions have
+something in common:
+They don't change with time, while the conjugate angles do.
+This means that, for a well-mixed population, the detailed element abundances can only
+be a function of actions, and never a function of conjugate angles.
+That's a remarkably informative constraint on the configuration of the Milky Way in
+the space of positions (3), velocities (3), and detailed abundances (10 to 30, depending
+on survey).
+
+Let's get more specific.
+Consider a collection of stars (localized, say, in phase space) for which we have
+measured $D$ element abundances.
+This collection of stars is drawn from some density or distribution in
+the $D$-dimensional element-abundance space.
+Now consider how this distribution varies as we move around in phase space.
+It will vary in general (there are radial and vertical abundance gradients in the
+disk, for example).
+Any gradient we observe in these element-abundance distributions with respect to
+phase-space coordinates (that is, the six-gradient) must not project
+onto the directions of increasing (or decreasing) conjugate angles in phase space.
+That is, all gradients with respect to phase-space coordinates
+of the element-abundance distribution must be orthogonal to the
+directions of increase (or decrease) of the conjugate angles, and lie in the subspace
+of the directions of increase (or decrease) of the dynamical actions.
+The trajectories of stars in the phase space (the dynamical tori) must lie along or
+describe level surfaces in the element-abundance distribution!
+
+One of the crazy things about all this is that any description of a general distribution in $D$-space
+requires a \emph{lot of parameters}.
+Even a trivial distribution---the Normal distribution---requires $(D+2)\,(D)$ parameters for its
+complete description, and anything more complex has more.
+That means that there are a very large set of element-abundance statistics for which the
+six-gradient exists or could be constraining for this project.
+Not all of these parameters can be reliably measured in a finite data set,
+let alone reliably seen to vary with phase-space location.
+However,
+we have discovered, in effect, a \emph{combinatorically large set of constraints on the
+dynamical actions and conjugate angles}.
+
+\cleardoublepage
 
 Aside: Controversy over the massive/dense disk.
 
