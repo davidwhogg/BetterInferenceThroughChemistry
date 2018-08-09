@@ -73,10 +73,10 @@ In this way they are like dynamical actions that are invariant along a stellar t
 Here we capitalize on the invariance of element abundances to identify dynamical
 invariants, by using the fact that---for a phase-mixed population---the abundance
 distribution ought to depend only on dynamical invariants, but not at all on time-variable
-dynamical phases.
+dynamical phases (conjugate actions).
 That is, the stellar orbits should be tangent everywhere to the
 element-abundance level hyper-surfaces or iso-abundance contours in 6-d phase
-space, or orthogonal to the 6-d chemical gradients.
+space, or orthogonal to the 6-d abundance gradients.
 For a first project, we consider only the vertical structure and dynamics of the Milky Way
 disk and only a few abundances, to demonstrate feasibility.
 % methods
@@ -91,7 +91,7 @@ These chemical-tangents methods have great advantages over other methods
 for inferring dynamical actions or orbits: They are not sensitive to spectroscopic
 selection functions, which have aspects that can't be known precisely; they
 do not require taking second moments of velocity data, which are not usually measured
-well; and the do not require a full forward model of the distribution function,
+well; and they do not require a full forward model of the distribution function,
 which is hard to model or marginalize with sufficient flexibility.
 \end{abstract}
 
@@ -153,7 +153,7 @@ rather than dynamical invariants, it could potentially permit dynamical inferenc
 about the Milky Way that do not rely on the phase-mixed assumption underlying
 most old-school methods.
 Chemical tagging has not yet successfully revealed the origins of
-the Milky Way, but chemical tags are starting to be used to identify stars that have
+the Milky Way, but element-abundance tags are starting to be used to identify stars that have
 migrated far from their birth locations (CITE).
 In its most na\"ive or strongest form, chemical tagging works when high-dimensional
 element-abundance measurements create such a specific fingerprint for a star that it
@@ -215,17 +215,88 @@ However,
 we have discovered, in effect, a \emph{combinatorically large set of constraints on the
 dynamical actions and conjugate angles}.
 
-\cleardoublepage
+HOGG Aside: Controversy over the massive/dense disk. How we might resolve it.
+But still making the phase-mixed assumption!
 
-Aside: Controversy over the massive/dense disk.
+\section{Assumptions}
+
+The method and results in this \documentname\ will flow from a specific set of
+assumptions.
+That is, we are going to make hard (and sometimes controversial) assumptions,
+and although the assumptions will be questionable, the claim will be that the
+method is correct under the assumptions.
+\begin{description}
+\item[well mixed] HOGG: All angles equally likely. There is probably also a regular-orbits
+assumption here, but it won't enter in this \documentname\ because we are only doing
+one-dimensional dynamics.
+
+\item[selection] HOGG: Selection depends on position in the Milky Way, but not
+on element abundances. Really it could even depend on velocity! But it can't depend
+on abundances. That might be very slightly wrong.
+
+\item[kinematic measurements] HOGG: Very strong assumption that phase space positions
+in 6-d are accurate and precise. So precise we don't have to generate them, we can
+condition on them!
+
+\item[chemical measurements] HOGG: Assumption that stars in different parts of phase
+space get the same abundance measurements. Questionable in certain kinds of samples.
+HOGG: Oddly I don't think we need to assume that the chemical measurements have good
+(or any) noise estimates. They could be terrible, I think.
+\end{description}
 
 \section{Method}
 
-In general, in 3-d, what is the idea?
+In general the idea underlying this method is to figure out what mass-density distribution
+in the Galaxy leads to orbits in phase space such that those orbits are level
+hyper-surfaces in phase space of statistics of the chemical-abundance distribution.
+Alternatively, the idea is to figure out what mass-density distribution leads to orbits
+on which statistics of the chemical-abundance distribution do not vary with conjugate
+angle.
+And of course this will all be done probabilistically, inasmuch as that is easy.
+So the idea is to perform probabilistic inference of the mass-density distribution.
 
-In this case, let's start with 1-d. What about that is simpler?
+HOGG: Dropping from 3-d to 1-d. In this case, let's start with 1-d. What about that is simpler?
+
+HOGG: maximize conjugate-angle diversity at fixed element abundances?
+Or minimize abundance-ratio diversity at fixed orbit? The latter! Why?
 
 \section{Data and results}
+
+\begin{figure}
+\caption{The data used in this \documentname. Each panel shows the stellar points in the
+plane of vertical position $z$ and vertical velocity $v_z$, colored by a different element
+abundance ratio. These are phase-space plots, but colored by the abundance ratios.
+It is clear in these plots that the abundance ratio level surfaces will be
+constraining on the orbits.\label{fig:data}}
+\end{figure}
+
+\begin{figure}
+\caption{Abundances versus conjugate angles, for different mass distributions.
+Each panel shows an abundance ratio HOGG vs conjugate angle $\phi_z$, for three different
+choices of the mean mass density at the disk midplane, for fixed scale height and midplane
+location. Note that when the mass distribution gets very wrong, the stars show strong
+dependences of abundance ratio on conjugate angle.\label{fig:density}}
+\end{figure}
+
+\begin{figure}
+\caption{Same as \figurename~\ref{fig:density}, but varying the scale height. Note that
+varying the scale height leads to a higher order variation with angle.\label{fig:scaleheight}}
+\end{figure}
+
+\begin{figure}
+\caption{Same as \figurename~\ref{fig:density}, but varying the midplane location. Note
+that varying the midplane location leads to a lower order variation with angle.\label{fig:midplane}}
+\end{figure}
+
+\begin{figure}
+\caption{Posterior samples for the model parameters.\label{fig:samples}}
+\end{figure}
+
+\begin{figure}
+\caption{Posterior orbit structure. Same as \figurename~\ref{fig:data} but now with
+posterior-sensible orbits shown to indicate that the orbits do come close to describing
+level surfaces in the phase space.}
+\end{figure}
 
 \section{Discussion}
 
