@@ -1,6 +1,10 @@
 """
 This file is part of the ChemicalTangents project.
 Copyright 2018 David W. Hogg (MPIA).
+
+bugs:
+-----
+- I don't know what parameters Pyia is using to go to Galactic 6-space.
 """
 
 from astropy.table import Table
@@ -10,10 +14,11 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 from pyia import GaiaData
+from integrate_orbits import *
 
 def plot_some_abundances(galah, galcen):
     nx, ny = 3, 2
-    fig, ax = plt.subplots(ny, nx, figsize=(15, 10), sharex=True, sharey=True)
+    fig, ax = plt.subplots(ny, nx, figsize=(nx * 5, ny * 5), sharex=True, sharey=True)
     ax = ax.flatten()
     for i,aname in enumerate(abundancenames):
         abundance = getattr(galah, aname)
@@ -45,6 +50,63 @@ if __name__ == "__main__":
     # make coordinates
     c = galah.get_skycoord(radial_velocity=galah.rv_synt)
     galcen = c.transform_to(coord.Galactocentric(z_sun=0*u.pc))
+    zs = galcen.z.to(u.pc).value
+    vs = galcen.v_z.to(u.km/u.s).value
+
+    # trim on coordinates
+    zlim = 1500. # pc
+    vlim =   75. # km / s
+    inbox = (np.abs(zs) < zlim) & (np.abs(vs) < vlim)
+    galah = galah[inbox]
+    galcen = galcen[inbox]
+
+    # get actions and angles
+    sigunits = 1. * M_sun / (pc ** 2)
+    pars = np.array([-10. * pc, 50. * sigunits, 300 * pc])
+    zs = galcen.z.to(u.pc).value
+    vs = galcen.v_z.to(u.km/u.s).value
+    vmaxs, phis = paint_actions_angles(zs, vs, pars)
+
+    # plot
+    nx, ny = 2, 1
+    fig, ax = plt.subplots(ny, nx, figsize=(nx * 5, ny * 5), sharex=True, sharey=True)
+    ax = ax.flatten()
+    for i, q in enumerate([vmaxs, phis]):
+        vmin, vmax = np.percentile(q, [0.1, 99.9])
+        foo = ax[i].scatter(vs, zs,
+                         marker=".", s=3000/np.sqrt(len(vs)),
+                         c=q, vmin=vmin, vmax=vmax, alpha=0.3,
+                         cmap=mpl.cm.plasma, rasterized=True)
+        if i % nx == 0:
+            ax[i].set_ylabel("$z$ [pc]")
+        if i // nx + 1 == ny:
+            ax[i].set_xlabel("$v_z$ [km/s]")
+    ax[0].set_xlim(-vlim, vlim)
+    ax[0].set_ylim(-zlim, zlim)
+    fig.savefig("galah_action_angle.pdf")
+
+    # plot angle plots
+    nx, ny = 1, 8
+    fig, ax = plt.subplots(ny, nx, figsize=(10, 10), sharex=True, sharey=True)
+    q = vmaxs
+    vmin, vmax = np.percentile(q, [0.5, 99.5])
+    for i in range(ny):
+        vmaxlims = np.percentile(vmaxs, [100 * i / ny, 100 * (i + 1) / ny])
+        inside = (vmaxs > vmaxlims[0]) * (vmaxs < vmaxlims[1])
+        print(phis[inside].shape, galah[inside].mg_fe.shape, q.shape)
+        foo = ax[i].scatter(phis[inside], galah[inside].mg_fe,
+                            marker=".", s=1000/np.sqrt(np.sum(inside)),
+                            c=q[inside], vmin=vmin, vmax=vmax, alpha=0.3,
+                            cmap=mpl.cm.plasma, rasterized=True)
+        if i % nx == 0:
+            ax[-1].set_ylabel("[Mg/Fe] [dex]")
+        if i // nx + 1 == ny:
+            ax[-1].set_xlabel(r"conjugate angle $\theta_z$ [rad]")
+    ax[-1].set_xlim(3.4, 4.)
+    ax[-1].set_ylim(-0.3, 0.6)
+    fig.savefig("galah_mg_angle.pdf")
+
+if False:
 
     # decide what and how to plot
     abundancenames = ["fe_h", "mg_fe", "o_fe", "al_fe", "mn_fe", "eu_fe"]

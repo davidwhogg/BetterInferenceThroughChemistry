@@ -46,7 +46,7 @@ def leapfrog(vmax, dt, acceleration, pars):
             break
     return zs[:t+2], vs[:t+2], phis
 
-def make_actions_angles_one(vmax, pars):
+def make_actions_angles_one(vmax, pars, timestep = 1e5 * yr):
     Ngrid = 512
     phigrid = np.arange(np.pi / Ngrid, 2. * np.pi, 2. * np.pi / Ngrid)
     zs, vs, phis = leapfrog(vmax * km / s, timestep, pure_exponential, pars)
@@ -76,7 +76,7 @@ def paint_actions_angles(atzs, atvs, pars):
     print("paint_actions_angles: getting nearest neighbors")
     inds = tree.query(np.vstack([(atzs / 1500.).T, (atvs / 75.).T]).T, return_distance=False)
     print("paint_actions_angles: done")
-    return vmaxs[inds], phis[inds]
+    return vmaxs[inds].flatten(), phis[inds].flatten()
 
 def pure_exponential(z, pars):
     midplane, surfacedensity, scaleheight = pars
@@ -94,7 +94,6 @@ if __name__ == "__main__":
     vlim =   75. # km/s
 
     sigunits = 1. * M_sun / (pc ** 2)
-    timestep = 1e5 * yr
     pars = np.array([-10. * pc, 50. * sigunits, 100 * pc])
 
     Nstars = 1000
@@ -114,7 +113,6 @@ if __name__ == "__main__":
     plt.savefig("vmaxs.png")
 
     sigunits = 1. * M_sun / (pc ** 2)
-    timestep = 1e5 * yr
     fig1, ax1 = plt.subplots(1, 1, figsize=(5, 5), sharex=True, sharey=True)
     fig2, ax2 = plt.subplots(1, 1, figsize=(5, 5), sharex=True, sharey=True)
     fig3, ax3 = plt.subplots(1, 1, figsize=(5, 5), sharex=True, sharey=True)
@@ -137,6 +135,7 @@ if __name__ == "__main__":
     ax2.set_xlim(0, vlim)
     ax2.set_ylim(0, zlim)
     fig2.savefig("eatme.png")
+
 if False:
     # testing
     plt.clf()
