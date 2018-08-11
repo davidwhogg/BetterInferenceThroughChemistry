@@ -2,8 +2,15 @@
 This file is part of the ChemicalTangents project
 copyright 2018 David W. Hogg (NYU) (MPIA) (Flatiron)
 
-Strictly SI units, which is INSANE
+notes:
+------
+- Strictly SI units, which is INSANE
+
+bugs / to-dos:
+--------------
+- Need to either remove midplane as a parameter or ADD barycentric velocity as a parameter.
 """
+
 import numpy as np
 from sklearn.neighbors import KDTree
 
@@ -40,8 +47,8 @@ def leapfrog(vmax, dt, acceleration, pars):
     return zs[:t+2], vs[:t+2], phis
 
 def make_actions_angles_one(vmax, pars):
-    Ngrid = 128
-    phigrid = np.arange(np.pi / Ngrid, 2. * np.pi, 1. / Ngrid)
+    Ngrid = 512
+    phigrid = np.arange(np.pi / Ngrid, 2. * np.pi, 2. * np.pi / Ngrid)
     zs, vs, phis = leapfrog(vmax * km / s, timestep, pure_exponential, pars)
     zs = np.interp(phigrid, phis, zs / (pc))
     vs = np.interp(phigrid, phis, vs / (km / s))
@@ -96,36 +103,41 @@ if __name__ == "__main__":
     vmaxs, phis = paint_actions_angles(zs, vs, pars)
 
     fig, ax = plt.subplots(1, 1, figsize=(5, 5), sharex=True, sharey=True)
-    plt.scatter(vs, zs, c=phis)
+    plt.scatter(vs, zs, c=phis, s=10.)
     plt.xlim(-vlim, vlim)
     plt.ylim(-zlim, zlim)
     plt.savefig("phis.png")
     fig, ax = plt.subplots(1, 1, figsize=(5, 5), sharex=True, sharey=True)
-    plt.scatter(vs, zs, c=vmaxs)
+    plt.scatter(vs, zs, c=vmaxs, s=10.)
     plt.xlim(-vlim, vlim)
     plt.ylim(-zlim, zlim)
     plt.savefig("vmaxs.png")
 
-if False:
     sigunits = 1. * M_sun / (pc ** 2)
     timestep = 1e5 * yr
-    fig, ax = plt.subplots(1, 1, figsize=(5, 5), sharex=True, sharey=True)
+    fig1, ax1 = plt.subplots(1, 1, figsize=(5, 5), sharex=True, sharey=True)
+    fig2, ax2 = plt.subplots(1, 1, figsize=(5, 5), sharex=True, sharey=True)
+    fig3, ax3 = plt.subplots(1, 1, figsize=(5, 5), sharex=True, sharey=True)
     for pars, plotstring in [
-        (np.array([-10. * pc, 50. * sigunits, 100 * pc]), "b."),
-        (np.array([-10. * pc, 50. * sigunits, 200 * pc]), "r."),
-        (np.array([-10. * pc, 70. * sigunits, 140 * pc]), "k."),
+        (np.array([-10. * pc, 50. * sigunits, 100 * pc]), "b"),
+        (np.array([-10. * pc, 50. * sigunits, 200 * pc]), "r"),
+        (np.array([-10. * pc, 70. * sigunits, 140 * pc]), "k"),
         ]:
         zs, vs, vmaxs, phis = make_actions_angles(pars)
-        plt.plot(vs, zs, plotstring, alpha=0.5)
-    plt.xlabel(r"$v_z$ [km\,s$^{-1}$]")
-    plt.ylabel(r"$z$ [pc]")
-    plt.xlim(-vlim, vlim)
-    plt.ylim(-zlim, zlim)
-    plt.savefig("eatme.png")
-    plt.xlim(35., 40.)
-    plt.ylim(-600., -500.)
-    plt.savefig("biteme.png")
-
+        ax1.plot(vs, zs, plotstring+".", alpha=0.5)
+        ax2.plot(vs, zs, plotstring+"-", alpha=0.5)
+        ax3.plot(phis, vmaxs, plotstring+".", alpha=0.5)
+    ax1.set_xlabel(r"$v_z$ [km\,s$^{-1}$]")
+    ax1.set_ylabel(r"$z$ [pc]")
+    ax1.set_xlim(35., 35. + 0.25 * vlim)
+    ax1.set_ylim(-600., -600. + 0.25 * zlim)
+    fig1.savefig("biteme.png")
+    ax2.set_xlabel(r"$v_z$ [km\,s$^{-1}$]")
+    ax2.set_ylabel(r"$z$ [pc]")
+    ax2.set_xlim(0, vlim)
+    ax2.set_ylim(0, zlim)
+    fig2.savefig("eatme.png")
+if False:
     # testing
     plt.clf()
     for vmax in np.arange(1., 30., 2.):
