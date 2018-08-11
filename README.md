@@ -9,3 +9,9 @@ Using element-abundance information to inform dynamical inferences.
 
 ## License:
 Copyright 2018 the authors.
+
+## Dependencies:
+- numpy
+- matplotlib
+- astropy
+- pyia
