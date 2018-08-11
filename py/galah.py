@@ -46,6 +46,7 @@ if __name__ == "__main__":
     galah = galah[(galah.parallax / galah.parallax_error) > 10.]
     galah = galah[np.isfinite(galah.teff) & (galah.teff > 4000*u.K) & (galah.teff < 6500*u.K)]
     galah = galah[np.isfinite(galah.logg) & (galah.logg < 3.5)]
+    galah = galah[(galah.mg_fe > -2.) * (galah.mg_fe < 2.)]
 
     # make coordinates
     c = galah.get_skycoord(radial_velocity=galah.rv_synt)
@@ -62,10 +63,16 @@ if __name__ == "__main__":
 
     # get actions and angles
     sigunits = 1. * M_sun / (pc ** 2)
-    pars = np.array([-10. * pc, 50. * sigunits, 300 * pc])
+    pars = np.array([+40. * pc, 50. * sigunits, 320 * pc]) # -10, 50, 320 are good numbers
     zs = galcen.z.to(u.pc).value
     vs = galcen.v_z.to(u.km/u.s).value
     vmaxs, phis = paint_actions_angles(zs, vs, pars)
+
+    # do some cray shit
+    mg_fe_minus_mean = 1. * galah.mg_fe
+    for vmax in np.unique(np.sort(vmaxs)):
+        this = vmaxs == vmax
+        mg_fe_minus_mean[this] -= np.mean(galah[this].mg_fe)
 
     # plot
     nx, ny = 2, 1
@@ -85,6 +92,21 @@ if __name__ == "__main__":
     ax[0].set_ylim(-zlim, zlim)
     fig.savefig("galah_action_angle.pdf")
 
+    # plot actions and angles
+    nx, ny = 1, 1
+    fig, ax = plt.subplots(ny, nx, figsize=(nx * 5, ny * 5), sharex=True, sharey=True)
+    q = mg_fe_minus_mean
+    vmin, vmax = -0.25, 0.25
+    foo = ax.scatter(phis, vmaxs,
+                     marker=".", s=3000/np.sqrt(len(vs)),
+                     c=q, vmin=vmin, vmax=vmax, alpha=0.3,
+                     cmap=mpl.cm.RdBu, rasterized=True)
+    ax.set_xlabel(r"conjugate angle $\theta_z$ [rad]")
+    ax.set_ylabel(r"$v_\mathrm{max}$ [km/s]")
+    ax.set_xlim(0, 2. * np.pi)
+    ax.set_ylim(0, np.max(vmaxs))
+    fig.savefig("galah_foo.pdf")
+
     # plot angle plots
     nx, ny = 1, 8
     fig, ax = plt.subplots(ny, nx, figsize=(10, 10), sharex=True, sharey=True)
@@ -93,17 +115,16 @@ if __name__ == "__main__":
     for i in range(ny):
         vmaxlims = np.percentile(vmaxs, [100 * i / ny, 100 * (i + 1) / ny])
         inside = (vmaxs > vmaxlims[0]) * (vmaxs < vmaxlims[1])
-        print(phis[inside].shape, galah[inside].mg_fe.shape, q.shape)
-        foo = ax[i].scatter(phis[inside], galah[inside].mg_fe,
+        foo = ax[i].scatter(phis[inside], mg_fe_minus_mean[inside],
                             marker=".", s=1000/np.sqrt(np.sum(inside)),
                             c=q[inside], vmin=vmin, vmax=vmax, alpha=0.3,
                             cmap=mpl.cm.plasma, rasterized=True)
         if i % nx == 0:
-            ax[-1].set_ylabel("[Mg/Fe] [dex]")
+            ax[-1].set_ylabel("[Mg/Fe] offset [dex]")
         if i // nx + 1 == ny:
             ax[-1].set_xlabel(r"conjugate angle $\theta_z$ [rad]")
-    ax[-1].set_xlim(3.4, 4.)
-    ax[-1].set_ylim(-0.3, 0.6)
+    ax[-1].set_xlim(0., 2. * np.pi)
+    ax[-1].set_ylim(-0.5, 0.5)
     fig.savefig("galah_mg_angle.pdf")
 
 if False:
