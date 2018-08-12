@@ -38,9 +38,45 @@ def plot_some_abundances(galah, galcen):
     ax[0].set_ylim(-zmax, zmax)
     return fig.tight_layout()
 
+def plot_uphis(galah, galcen, parindex, offset):
+    # get actions and angles
+    pars = np.array([0. * pc, 1. * km / s, 50. * sigunits, 500 * pc]) # 10, 10, 50, 500 are good numbers
+    pars[parindex] += offset
+    zs = galcen.z.to(u.pc).value
+    vs = galcen.v_z.to(u.km/u.s).value
+    vmaxs, phis = paint_actions_angles(zs, vs, pars)
+
+    # do some cray shit; not quite the right thing to do
+    uvmaxs = np.unique(np.sort(vmaxs))
+    uphis  = np.unique(np.sort(phis))
+    mg_fe_minus_mean = 1. * galah.mg_fe
+    for vmax in uvmaxs:
+        this = vmaxs == vmax
+        mg_fe_minus_mean[this] -= np.mean(galah[this].mg_fe)
+    mg_fe_offsets = np.zeros_like(uphis)
+    mg_fe_offsets_err = np.zeros_like(uphis)
+    for i, phi in enumerate(uphis):
+        this = phis == phi
+        mg_fe_offsets[i] = np.mean(mg_fe_minus_mean[this])
+        mg_fe_offsets_err[i] = np.sqrt(np.var(mg_fe_minus_mean[this]) / np.sum(this))
+
+    # plot mg_fe_offsets
+    nx, ny = 1, 1
+    fig, ax = plt.subplots(ny, nx, figsize=(nx * 10, ny * 5), sharex=True, sharey=True)
+    foo = ax.errorbar(uphis, mg_fe_offsets, fmt="k.", yerr=mg_fe_offsets_err)
+    ax.axhline(0., color="k", alpha=0.5, zorder=-10.)
+    ax.set_ylabel(r"$\theta_z$ [rad]")
+    ax.set_xlabel("mean [Mg/Fe] offset [dex]")
+    ax.set_xlim(0, 2 * np.pi)
+    ax.set_ylim(-0.2, 0.2)
+    plt.title(r"$z = {}$; $v_z = {}$; $\Sigma = {}$; $h = {}$".format(
+            pars[0] / (pc), pars[1] / (km / s), pars[2] / (sigunits), pars[3] / (pc)))
+    return fig, ax
+
 if __name__ == "__main__":
 
     # read data and cut
+    print("__main__: reading and cutting galah data")
     galah = GaiaData('../data/GALAH-GaiaDR2-xmatch.fits.gz')
     galah = galah[np.isfinite(galah.parallax_error)]
     galah = galah[(galah.parallax / galah.parallax_error) > 10.]
@@ -49,6 +85,7 @@ if __name__ == "__main__":
     galah = galah[(galah.mg_fe > -2.) * (galah.mg_fe < 2.)]
 
     # make coordinates
+    print("__main__: dealing with coordinates")
     c = galah.get_skycoord(radial_velocity=galah.rv_synt)
     galcen = c.transform_to(coord.Galactocentric(z_sun=0*u.pc))
     zs = galcen.z.to(u.pc).value
@@ -57,22 +94,38 @@ if __name__ == "__main__":
     # trim on coordinates
     zlim = 1500. # pc
     vlim =   75. # km / s
-    inbox = (np.abs(zs) < zlim) & (np.abs(vs) < vlim)
+    inbox = (np.abs(zs / zlim) < 1.) & (np.abs(vs / vlim) < 1)
     galah = galah[inbox]
     galcen = galcen[inbox]
 
-    # get actions and angles
-    sigunits = 1. * M_sun / (pc ** 2)
-    pars = np.array([+40. * pc, 50. * sigunits, 320 * pc]) # -10, 50, 320 are good numbers
-    zs = galcen.z.to(u.pc).value
-    vs = galcen.v_z.to(u.km/u.s).value
-    vmaxs, phis = paint_actions_angles(zs, vs, pars)
+    # makd some plots
+    print("__main__: starting plotting cycle")
+    fig, ax = plot_uphis(galah, galcen, 0, 0.)
+    fig.savefig("offset_uphi.pdf")
 
-    # do some cray shit
-    mg_fe_minus_mean = 1. * galah.mg_fe
-    for vmax in np.unique(np.sort(vmaxs)):
-        this = vmaxs == vmax
-        mg_fe_minus_mean[this] -= np.mean(galah[this].mg_fe)
+    i = 0
+    for j, off in enumerate(np.arange(-50., 51., 25.)):
+        fig, ax = plot_uphis(galah, galcen, i, off * pc)
+        fig.savefig("offset_uphi_{}_{}.pdf".format(i, j))
+
+    i = 1
+    for j, off in enumerate(np.arange(-4., 4.1, 2.)):
+        fig, ax = plot_uphis(galah, galcen, i, off * km / s)
+        fig.savefig("offset_uphi_{}_{}.pdf".format(i, j))
+
+    i = 2
+    for j, off in enumerate(np.arange(-20., 21., 10.)):
+        fig, ax = plot_uphis(galah, galcen, i, off * sigunits)
+        fig.savefig("offset_uphi_{}_{}.pdf".format(i, j))
+
+    i = 3
+    for j, off in enumerate(np.arange(-200., 201., 100.)):
+        fig, ax = plot_uphis(galah, galcen, i, off * pc)
+        fig.savefig("offset_uphi_{}_{}.pdf".format(i, j))
+
+    print("__main__: done")
+
+if False:
 
     # plot
     nx, ny = 2, 1

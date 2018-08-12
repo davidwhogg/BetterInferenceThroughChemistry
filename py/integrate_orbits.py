@@ -8,7 +8,7 @@ notes:
 
 bugs / to-dos:
 --------------
-- Need to either remove midplane as a parameter or ADD barycentric velocity as a parameter.
+- Need to re-test now that I moved the midplane parameter.
 """
 
 import numpy as np
@@ -20,6 +20,7 @@ M_sun = 1.9891e30 # kg
 km = 1000. # m
 s = 1. # s
 yr = 365.25 * 24. * 3600. * s
+sigunits = 1. * M_sun / (pc ** 2)
 
 def leapfrog_step(z, v, dt, acceleration, pars):
     znew = z + v * dt
@@ -28,23 +29,24 @@ def leapfrog_step(z, v, dt, acceleration, pars):
 
 def leapfrog(vmax, dt, acceleration, pars):
     """
-    assumes that pars[0] is the midplane location
+    assumes that pars[0:2] are the position and velocity of the barycenter,
+    and pars[2:] are the acceleration pars.
     """
-    midplane = pars[0]
+    zsun, vzsun = pars[0:2]
     maxstep = 32768
     zs = np.zeros(maxstep) - np.Inf
     vs = np.zeros(maxstep) - np.Inf
-    zs[0] = midplane
+    zs[0] = 0.
     vs[0] = vmax
     v = vs[0]
     for t in range(maxstep-1):
-        zs[t + 1], vs[t + 1], v = leapfrog_step(zs[t], v, dt, acceleration, pars)
-        if zs[t] < midplane and zs[t+1] >= midplane:
-            fraction = (midplane - zs[t]) / (zs[t+1] - zs[t])
+        zs[t + 1], vs[t + 1], v = leapfrog_step(zs[t], v, dt, acceleration, pars[2:])
+        if zs[t] < 0. and zs[t+1] >= 0.:
+            fraction = (0. - zs[t]) / (zs[t+1] - zs[t])
             period = dt * (t + fraction)
             phis = 2 * np.pi * np.arange(t+2) * dt / period
             break
-    return zs[:t+2], vs[:t+2], phis
+    return zs[:t+2] - zsun, vs[:t+2] - vzsun, phis
 
 def make_actions_angles_one(vmax, pars, timestep = 1e5 * yr):
     Ngrid = 512
@@ -79,9 +81,8 @@ def paint_actions_angles(atzs, atvs, pars):
     return vmaxs[inds].flatten(), phis[inds].flatten()
 
 def pure_exponential(z, pars):
-    midplane, surfacedensity, scaleheight = pars
-    zprime = z - midplane
-    return -1. * fourpiG * surfacedensity * (1. - np.exp(-np.abs(zprime) / scaleheight)) * np.sign(zprime)
+    surfacedensity, scaleheight = pars
+    return -1. * fourpiG * surfacedensity * (1. - np.exp(-np.abs(z) / scaleheight)) * np.sign(z)
 
 def dummy(z, pars):
     return -1.5 * np.sign(z)
@@ -93,8 +94,7 @@ if __name__ == "__main__":
     zlim = 1500. # pc
     vlim =   75. # km/s
 
-    sigunits = 1. * M_sun / (pc ** 2)
-    pars = np.array([-10. * pc, 50. * sigunits, 100 * pc])
+    pars = np.array([-10. * pc, 0. * km / s, 50. * sigunits, 100 * pc])
 
     Nstars = 1000
     zs = zlim * (np.random.uniform(size=Nstars) * 2. - 1)
@@ -112,14 +112,13 @@ if __name__ == "__main__":
     plt.ylim(-zlim, zlim)
     plt.savefig("vmaxs.png")
 
-    sigunits = 1. * M_sun / (pc ** 2)
     fig1, ax1 = plt.subplots(1, 1, figsize=(5, 5), sharex=True, sharey=True)
     fig2, ax2 = plt.subplots(1, 1, figsize=(5, 5), sharex=True, sharey=True)
     fig3, ax3 = plt.subplots(1, 1, figsize=(5, 5), sharex=True, sharey=True)
     for pars, plotstring in [
-        (np.array([-10. * pc, 50. * sigunits, 100 * pc]), "b"),
-        (np.array([-10. * pc, 50. * sigunits, 200 * pc]), "r"),
-        (np.array([-10. * pc, 70. * sigunits, 140 * pc]), "k"),
+        (np.array([10. * pc, 0.5 * km / s, 50. * sigunits, 100 * pc]), "b"),
+        (np.array([10. * pc, 0.5 * km / s, 50. * sigunits, 200 * pc]), "r"),
+        (np.array([10. * pc, 0.5 * km / s, 70. * sigunits, 140 * pc]), "k"),
         ]:
         zs, vs, vmaxs, phis = make_actions_angles(pars)
         ax1.plot(vs, zs, plotstring+".", alpha=0.5)
@@ -136,15 +135,27 @@ if __name__ == "__main__":
     ax2.set_ylim(0, zlim)
     fig2.savefig("eatme.png")
 
-if False:
     # testing
+    pars[0] = 7.5 * pc
+    pars[1] = 1.5 * (km / 2)
     plt.clf()
     for vmax in np.arange(1., 30., 2.):
-        zs, vs, phis = leapfrog(vmax * km / s, timestep, pure_exponential, pars)
+        zs, vs, phis = leapfrog(vmax * km / s, 1e5 * yr, pure_exponential, pars)
         zs = zs / (pc)
         vs = vs / (km / s)
         plt.plot(phis, zs, "k-", alpha=0.5)
     plt.xlim(2. * np.pi - 0.1, 2. * np.pi + 0.1)
-    plt.axhline(pars[0] / pc)
-    plt.ylim(pars[0] / pc - 1., pars[0] / pc + 1.)
+    plt.axhline(-pars[0] / pc)
+    plt.ylim(-pars[0] / pc - 10., -pars[0] / pc + 10.)
     plt.savefig("test_2_pi.png")
+
+    plt.clf()
+    for vmax in np.arange(1., 30., 2.):
+        zs, vs, phis = leapfrog(vmax * km / s, 1e5 * yr, pure_exponential, pars)
+        zs = zs / (pc)
+        vs = vs / (km / s)
+        plt.plot(phis, vs, "k-", alpha=0.5)
+    plt.xlim(1.5 * np.pi - 0.1, 1.5 * np.pi + 0.1)
+    plt.axhline(-pars[1] / (km / s))
+    plt.ylim(-pars[1] / (km / s) - 1., -pars[1] / (km / s) + 1.)
+    plt.savefig("test_1p5_pi.png")
