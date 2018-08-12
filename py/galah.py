@@ -66,8 +66,8 @@ def plot_uphis(galah, galcen, parindex, offset):
     fig, ax = plt.subplots(ny, nx, figsize=(nx * 10, ny * 5), sharex=True, sharey=True)
     foo = ax.errorbar(uphis, mg_fe_offsets, fmt="k.", yerr=mg_fe_offsets_err)
     ax.axhline(0., color="k", alpha=0.5, zorder=-10.)
-    ax.set_ylabel(r"$\theta_z$ [rad]")
-    ax.set_xlabel("mean [Mg/Fe] offset [dex]")
+    ax.set_xlabel(r"$\theta_z$ [rad]")
+    ax.set_ylabel("mean [Mg/Fe] offset [dex]")
     ax.set_xlim(0, 2 * np.pi)
     ax.set_ylim(-0.2, 0.2)
     plt.title(r"$z = {:.1f}$ pc; $v_z = {:.1f}$ km/s; $\Sigma = {:.0f}$ M/pc$^2$; $h = {:.0f}$ pc".format(
