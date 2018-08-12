@@ -42,19 +42,23 @@ def plot_some_abundances(galah, galcen):
 
 def plot_uphis(galah, galcen, parindex, offset):
     # get actions and angles
-    pars = np.array([0. * pc, 2. * km / s, 40. * sigunits, 350 * pc])
+    pars = np.array([0. * pc, 2. * km / s, 65. * sigunits, 400 * pc])
     pars[parindex] += offset
     zs = galcen.z.to(u.pc).value
     vs = galcen.v_z.to(u.km/u.s).value
     vmaxs, phis = paint_actions_angles(zs, vs, pars)
+    # exclude inner and outer rings, as it were
+    good = (vmaxs > (np.min(vmaxs) + 0.1)) & (vmaxs < (np.max(vmaxs) - 0.1))
+    vmaxs = vmaxs[good]
+    phis = phis[good]
 
     # do some cray shit; not quite the right thing to do
     uvmaxs = np.unique(np.sort(vmaxs))
     uphis  = np.unique(np.sort(phis))
-    mg_fe_minus_mean = 1. * galah.mg_fe
+    mg_fe_minus_mean = 1. * galah[good].mg_fe
     for vmax in uvmaxs:
         this = vmaxs == vmax
-        mg_fe_minus_mean[this] -= np.mean(galah[this].mg_fe)
+        mg_fe_minus_mean[this] -= np.mean(galah[good][this].mg_fe)
     mg_fe_offsets = np.zeros_like(uphis)
     mg_fe_offsets_err = np.zeros_like(uphis)
     for i, phi in enumerate(uphis):
@@ -71,6 +75,44 @@ def plot_uphis(galah, galcen, parindex, offset):
     ax.set_ylabel("mean [Mg/Fe] offset [dex]")
     ax.set_xlim(0, 2 * np.pi)
     ax.set_ylim(-0.2, 0.2)
+    plt.title(r"$z = {:.1f}$ pc; $v_z = {:.1f}$ km/s; $\Sigma = {:.0f}$ M/pc$^2$; $h = {:.0f}$ pc".format(
+            pars[0] / (pc), pars[1] / (km / s), pars[2] / (sigunits), pars[3] / (pc)))
+    return fig, ax
+
+def plot_uvmaxs(galah, galcen, parindex, offset):
+    # get actions and angles
+    pars = np.array([0. * pc, 2. * km / s, 65. * sigunits, 400 * pc])
+    pars[parindex] += offset
+    zs = galcen.z.to(u.pc).value
+    vs = galcen.v_z.to(u.km/u.s).value
+    vmaxs, phis = paint_actions_angles(zs, vs, pars)
+    # exclude inner and outer rings, as it were
+    good = (vmaxs > (np.min(vmaxs) + 0.1)) & (vmaxs < (np.max(vmaxs) - 0.1))
+    vmaxs = vmaxs[good]
+    phis = phis[good]
+
+    # do some cray shit; not quite the right thing to do
+    uvmaxs = np.unique(np.sort(vmaxs))
+    mg_fe_lnvars = np.zeros_like(uvmaxs)
+    denominators = np.zeros_like(uvmaxs)
+    TINY = -8
+    for i,vmax in enumerate(uvmaxs):
+        this = vmaxs == vmax
+        denominators[i] = np.sum(this) - 1.
+        var = np.var(galah[good][this].mg_fe)
+        mg_fe_lnvars[i] = np.log(var + np.exp(TINY))
+
+    # plot mg_fe_offsets
+    nx, ny = 1, 1
+    fig, ax = plt.subplots(ny, nx, figsize=(nx * 10, ny * 5), sharex=True, sharey=True)
+    ax.plot(uvmaxs, mg_fe_lnvars, "k.")
+    mean_lnvar = np.sum(mg_fe_lnvars * denominators) / np.sum(denominators)
+    print(mean_lnvar)
+    ax.axhline(mean_lnvar, color="k", alpha=0.5, zorder=-10)
+    ax.set_xlabel(r"$v_{\max}$ [km/s]")
+    ax.set_ylabel("log variance of [Mg/Fe] at that orbit [nat]")
+    ax.set_xlim(0., 80.) # km/s
+    ax.set_ylim(-4., -3.) # nats
     plt.title(r"$z = {:.1f}$ pc; $v_z = {:.1f}$ km/s; $\Sigma = {:.0f}$ M/pc$^2$; $h = {:.0f}$ pc".format(
             pars[0] / (pc), pars[1] / (km / s), pars[2] / (sigunits), pars[3] / (pc)))
     return fig, ax
@@ -97,38 +139,36 @@ if __name__ == "__main__":
     # trim on coordinates
     zlim = 1500. # pc
     vlim =   75. # km / s
-    inbox = (np.abs(zs / zlim) < 1.) & (np.abs(vs / vlim) < 1)
+    inbox = np.abs(vs) < (vlim + 1.)
     galah = galah[inbox]
     galcen = galcen[inbox]
 
     # makd some plots
     print("__main__: starting plotting cycle")
-    fig, ax = plot_uphis(galah, galcen, 0, 0.)
-    fig.savefig("offset_uphi.pdf")
-    plt.close(fig)
-
+    # plotname, plotfunc = "offset_uphi", plot_uphis
+    plotname, plotfunc = "lnvar_uvmax", plot_uvmaxs
     i = 0
     for j, off in enumerate(np.arange(-50., 51., 25.)):
-        fig, ax = plot_uphis(galah, galcen, i, off * pc)
-        fig.savefig("offset_uphi_{}_{}.pdf".format(i, j))
+        fig, ax = plotfunc(galah, galcen, i, off * pc)
+        fig.savefig("{}_{}_{}.pdf".format(plotname, i, j))
         plt.close(fig)
 
     i = 1
     for j, off in enumerate(np.arange(-4., 4.1, 2.)):
-        fig, ax = plot_uphis(galah, galcen, i, off * km / s)
-        fig.savefig("offset_uphi_{}_{}.pdf".format(i, j))
+        fig, ax = plotfunc(galah, galcen, i, off * km / s)
+        fig.savefig("{}_{}_{}.pdf".format(plotname, i, j))
         plt.close(fig)
 
     i = 2
     for j, off in enumerate(np.arange(-20., 21., 10.)):
-        fig, ax = plot_uphis(galah, galcen, i, off * sigunits)
-        fig.savefig("offset_uphi_{}_{}.pdf".format(i, j))
+        fig, ax = plotfunc(galah, galcen, i, off * sigunits)
+        fig.savefig("{}_{}_{}.pdf".format(plotname, i, j))
         plt.close(fig)
 
     i = 3
     for j, off in enumerate(np.arange(-200., 201., 100.)):
-        fig, ax = plot_uphis(galah, galcen, i, off * pc)
-        fig.savefig("offset_uphi_{}_{}.pdf".format(i, j))
+        fig, ax = plotfunc(galah, galcen, i, off * pc)
+        fig.savefig("{}_{}_{}.pdf".format(plotname, i, j))
         plt.close(fig)
 
     print("__main__: done")

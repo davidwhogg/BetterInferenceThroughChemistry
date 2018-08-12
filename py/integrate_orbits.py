@@ -59,8 +59,8 @@ def make_actions_angles_one(vmax, pars, timestep = 1e5 * yr):
     vmaxs = np.zeros_like(phigrid) + vmax
     return zs, vs, vmaxs, phigrid
 
-def make_actions_angles(pars, zlim=1500., vlim=75.):
-    vmaxlist = np.arange(0.5, 200., 1.)
+def make_actions_angles(pars, vlim=75.):
+    vmaxlist = np.arange(2., vlim + 5., 4.) # magic numbers
     zs, vs, phis, vmaxs = [], [], [], []
     for vmax in vmaxlist:
         tzs, tvs, tphis, tvmaxs = make_actions_angles_one(vmax, pars)
@@ -68,8 +68,6 @@ def make_actions_angles(pars, zlim=1500., vlim=75.):
         vs = np.append(vs, tvs)
         phis = np.append(phis, tphis)
         vmaxs = np.append(vmaxs, tvmaxs)
-        if np.sum((np.abs(zs) < zlim) & (np.abs(vs) < vlim)) == 0:
-            break
     return zs, vs, vmaxs, phis
 
 def paint_actions_angles(atzs, atvs, pars):
