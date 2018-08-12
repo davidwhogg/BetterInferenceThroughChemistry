@@ -36,11 +36,12 @@ def plot_some_abundances(galah, galcen):
             ax[i].set_xlabel("$v_z$ [km/s]")
     ax[0].set_xlim(-vzmax, vzmax)
     ax[0].set_ylim(-zmax, zmax)
-    return fig.tight_layout()
+    fig.tight_layout()
+    return fig, ax
 
 def plot_uphis(galah, galcen, parindex, offset):
     # get actions and angles
-    pars = np.array([0. * pc, 1. * km / s, 50. * sigunits, 500 * pc]) # 10, 10, 50, 500 are good numbers
+    pars = np.array([0. * pc, 2. * km / s, 45. * sigunits, 350 * pc])
     pars[parindex] += offset
     zs = galcen.z.to(u.pc).value
     vs = galcen.v_z.to(u.km/u.s).value
@@ -102,26 +103,31 @@ if __name__ == "__main__":
     print("__main__: starting plotting cycle")
     fig, ax = plot_uphis(galah, galcen, 0, 0.)
     fig.savefig("offset_uphi.pdf")
+    plt.close(fig)
 
     i = 0
     for j, off in enumerate(np.arange(-50., 51., 25.)):
         fig, ax = plot_uphis(galah, galcen, i, off * pc)
         fig.savefig("offset_uphi_{}_{}.pdf".format(i, j))
+        plt.close(fig)
 
     i = 1
     for j, off in enumerate(np.arange(-4., 4.1, 2.)):
         fig, ax = plot_uphis(galah, galcen, i, off * km / s)
         fig.savefig("offset_uphi_{}_{}.pdf".format(i, j))
+        plt.close(fig)
 
     i = 2
     for j, off in enumerate(np.arange(-20., 21., 10.)):
         fig, ax = plot_uphis(galah, galcen, i, off * sigunits)
         fig.savefig("offset_uphi_{}_{}.pdf".format(i, j))
+        plt.close(fig)
 
     i = 3
     for j, off in enumerate(np.arange(-200., 201., 100.)):
         fig, ax = plot_uphis(galah, galcen, i, off * pc)
         fig.savefig("offset_uphi_{}_{}.pdf".format(i, j))
+        plt.close(fig)
 
     print("__main__: done")
 
@@ -144,6 +150,7 @@ if False:
     ax[0].set_xlim(-vlim, vlim)
     ax[0].set_ylim(-zlim, zlim)
     fig.savefig("galah_action_angle.pdf")
+    plt.close(fig)
 
     # plot actions and angles
     nx, ny = 1, 1
@@ -159,6 +166,7 @@ if False:
     ax.set_xlim(0, 2. * np.pi)
     ax.set_ylim(0, np.max(vmaxs))
     fig.savefig("galah_foo.pdf")
+    plt.close(fig)
 
     # plot angle plots
     nx, ny = 1, 8
@@ -179,6 +187,7 @@ if False:
     ax[-1].set_xlim(0., 2. * np.pi)
     ax[-1].set_ylim(-0.5, 0.5)
     fig.savefig("galah_mg_angle.pdf")
+    plt.close(fig)
 
 if False:
 
@@ -195,5 +204,6 @@ if False:
     vzmax = 75. # km / s
 
     # plot
-    foo = plot_some_abundances(galah, galcen)
-    plt.savefig("galah_full_sample.pdf")
+    fig, ax = plot_some_abundances(galah, galcen)
+    fig.savefig("galah_full_sample.pdf")
+    plt.close(fig)
