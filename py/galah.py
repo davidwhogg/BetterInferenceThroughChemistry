@@ -5,6 +5,7 @@ Copyright 2018 David W. Hogg (MPIA).
 bugs:
 -----
 - I don't know what parameters Pyia is using to go to Galactic 6-space.
+- stop cutting in z and vz and cut instead on vmax!
 """
 
 from astropy.table import Table

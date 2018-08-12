@@ -14,7 +14,9 @@ bugs / to-dos:
 import numpy as np
 from sklearn.neighbors import KDTree
 
-fourpiG = 4. * np.pi * 6.67408e-11 # m m m / kg / s / s
+G = 6.67408e-11 # m m m / kg / s / s
+twopiG = 2. * np.pi * G
+fourG = 4. * G
 pc = 3.0857e16 # m
 M_sun = 1.9891e30 # kg
 km = 1000. # m
@@ -51,7 +53,7 @@ def leapfrog(vmax, dt, acceleration, pars):
 def make_actions_angles_one(vmax, pars, timestep = 1e5 * yr):
     Ngrid = 512
     phigrid = np.arange(np.pi / Ngrid, 2. * np.pi, 2. * np.pi / Ngrid)
-    zs, vs, phis = leapfrog(vmax * km / s, timestep, pure_exponential, pars)
+    zs, vs, phis = leapfrog(vmax * km / s, timestep, pure_sech, pars)
     zs = np.interp(phigrid, phis, zs / (pc))
     vs = np.interp(phigrid, phis, vs / (km / s))
     vmaxs = np.zeros_like(phigrid) + vmax
@@ -80,9 +82,13 @@ def paint_actions_angles(atzs, atvs, pars):
     print("paint_actions_angles: done")
     return vmaxs[inds].flatten(), phis[inds].flatten()
 
+def pure_sech(z, pars):
+    surfacedensity, scaleheight = pars
+    return -8. * G * surfacedensity * np.arctan(np.tanh(z / scaleheight))
+
 def pure_exponential(z, pars):
     surfacedensity, scaleheight = pars
-    return -1. * fourpiG * surfacedensity * (1. - np.exp(-np.abs(z) / scaleheight)) * np.sign(z)
+    return -twopiG * surfacedensity * (1. - np.exp(-np.abs(z) / scaleheight)) * np.sign(z)
 
 def dummy(z, pars):
     return -1.5 * np.sign(z)
@@ -90,11 +96,20 @@ def dummy(z, pars):
 if __name__ == "__main__":
     import pylab as plt
     plt.rc('text', usetex=True)
+    pars = np.array([-10. * pc, 0. * km / s, 100. * sigunits, 400 * pc])
+    kmpspMyr = 1 * ((km / s) / (1e6 * yr))
+
+    plt.clf()
+    dz = 1.
+    zs = np.arange(-1500. + 0.5 * dz, 1500., dz) * pc
+    plt.plot(zs / pc, pure_exponential(zs, pars[2:]) / kmpspMyr, "k-", alpha=0.75)
+    plt.plot(zs / pc, pure_sech(zs, pars[2:]) / kmpspMyr, "b-", alpha=0.75)
+    plt.savefig("sech.png")
+
+if False:
 
     zlim = 1500. # pc
     vlim =   75. # km/s
-
-    pars = np.array([-10. * pc, 0. * km / s, 50. * sigunits, 100 * pc])
 
     Nstars = 1000
     zs = zlim * (np.random.uniform(size=Nstars) * 2. - 1)
