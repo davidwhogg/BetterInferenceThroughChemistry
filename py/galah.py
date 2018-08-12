@@ -41,7 +41,7 @@ def plot_some_abundances(galah, galcen):
 
 def plot_uphis(galah, galcen, parindex, offset):
     # get actions and angles
-    pars = np.array([0. * pc, 2. * km / s, 45. * sigunits, 350 * pc])
+    pars = np.array([0. * pc, 2. * km / s, 40. * sigunits, 350 * pc])
     pars[parindex] += offset
     zs = galcen.z.to(u.pc).value
     vs = galcen.v_z.to(u.km/u.s).value
@@ -70,7 +70,7 @@ def plot_uphis(galah, galcen, parindex, offset):
     ax.set_xlabel("mean [Mg/Fe] offset [dex]")
     ax.set_xlim(0, 2 * np.pi)
     ax.set_ylim(-0.2, 0.2)
-    plt.title(r"$z = {}$; $v_z = {}$; $\Sigma = {}$; $h = {}$".format(
+    plt.title(r"$z = {:.1f}$ pc; $v_z = {:.1f}$ km/s; $\Sigma = {:.0f}$ M/pc$^2$; $h = {:.0f}$ pc".format(
             pars[0] / (pc), pars[1] / (km / s), pars[2] / (sigunits), pars[3] / (pc)))
     return fig, ax
 
@@ -81,8 +81,9 @@ if __name__ == "__main__":
     galah = GaiaData('../data/GALAH-GaiaDR2-xmatch.fits.gz')
     galah = galah[np.isfinite(galah.parallax_error)]
     galah = galah[(galah.parallax / galah.parallax_error) > 10.]
-    galah = galah[np.isfinite(galah.teff) & (galah.teff > 4000*u.K) & (galah.teff < 6500*u.K)]
-    galah = galah[np.isfinite(galah.logg) & (galah.logg < 3.5)]
+    galah = galah[(galah.teff > 4000*u.K) & (galah.teff < 6500*u.K)]
+    galah = galah[galah.logg < 3.5]
+    galah = galah[np.isfinite(galah.mg_fe)]
     galah = galah[(galah.mg_fe > -2.) * (galah.mg_fe < 2.)]
 
     # make coordinates
