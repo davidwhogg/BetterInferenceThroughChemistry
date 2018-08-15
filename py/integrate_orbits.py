@@ -8,7 +8,9 @@ notes:
 
 bugs / to-dos:
 --------------
-- Need to re-test now that I moved the midplane parameter.
+- Move the lf into this file from `galah.py`.
+- Make the lf with an explicit smooth function of actions for the mean. Like linear or quadratic.
+- Deal with edge stars by just assigning them to the largest action ring we have.
 """
 
 import numpy as np
