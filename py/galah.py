@@ -17,6 +17,21 @@ import numpy as np
 from pyia import GaiaData
 from integrate_orbits import *
 
+def ln_like(qs, vmaxs, var, priormean, priorvar):
+    """
+    I'm making shit up here.
+    """
+    uvmaxs = np.unique(np.sort(vmaxs))
+    chi2 = 0.
+    for vmax in uvmaxs:
+        this = vmaxs == vmax
+        thisqs = qs[this]
+        denominator = 1. / priorvar + np.sum(this) / var
+        numerator = priormean / priorvar + np.sum(thisqs) / var
+        mean = numerator / denominator
+        chi2 += np.sum((thisqs - mean) ** 2 / var) - np.log(denominator) # made up!
+    return -0.5 * chi2
+
 def plot_some_abundances(galah, galcen):
     nx, ny = 3, 2
     fig, ax = plt.subplots(ny, nx, figsize=(nx * 5, ny * 5), sharex=True, sharey=True)
@@ -42,7 +57,7 @@ def plot_some_abundances(galah, galcen):
 
 def plot_uphis(galah, galcen, parindex, offset):
     # get actions and angles
-    pars = np.array([0. * pc, 2. * km / s, 65. * sigunits, 400 * pc])
+    pars = np.array([0. * pc, 2. * km / s, 65. * sigunits, 350 * pc])
     pars[parindex] += offset
     zs = galcen.z.to(u.pc).value
     vs = galcen.v_z.to(u.km/u.s).value
@@ -142,8 +157,53 @@ if __name__ == "__main__":
     inbox = np.abs(vs) < (vlim + 1.)
     galah = galah[inbox]
     galcen = galcen[inbox]
+    zs = galcen.z.to(u.pc).value
+    vs = galcen.v_z.to(u.km/u.s).value
 
-    # makd some plots
+    # plot some likelihood sequences
+    pars0 = np.array([10. * pc, 0.8 * km / s, 60. * sigunits, 400 * pc])
+    for i, units, name, scale in [(0, pc, "zsun", 5.),
+                                (1, km / s, "vsun", 1.),
+                                (2, sigunits, "sigma", 10.),
+                                (3, pc, "scaleheight", 100.)]:
+        parsis = pars0[i] + np.arange(-1., 1.001, 0.04) * scale * units
+        llfs = np.zeros_like(parsis)
+        for j, parsi in enumerate(parsis):
+            pars = 1. * pars0
+            pars[i] = parsi
+            vmaxs, phis = paint_actions_angles(zs, vs, pars)
+            llfs[j] = ln_like(galah.mg_fe, vmaxs, 0.03 ** 2, 0., 1.) # made up shit
+        plt.clf()
+        plt.plot(parsis / units, llfs, "ko", alpha=0.75)
+        plt.axvline(pars0[i] / units, color="k", alpha=0.5, zorder = -10)
+        plt.xlabel(name)
+        plt.ylabel("log LF")
+        plt.savefig("lf_{}_test.png".format(name))
+
+if False:
+
+    # decide what and how to plot
+    galah.mn_mg = galah.mn_fe - galah.mg_fe
+    galah.eu_mg = galah.eu_fe - galah.mg_fe
+    abundancenames = ["fe_h", "mg_fe", "o_fe", "al_fe", "mn_mg", "eu_mg"]
+    abundancelabels = {}
+    abundancelabels["fe_h"] = "[Fe/H]"
+    abundancelabels["mg_fe"] = "[Mg/Fe]"
+    abundancelabels["o_fe"] = "[O/Fe]"
+    abundancelabels["al_fe"] = "[Al/Fe]"
+    abundancelabels["mn_fe"] = "[Mn/Fe]"
+    abundancelabels["eu_fe"] = "[Eu/Fe]"
+    abundancelabels["mn_mg"] = "[Mn/Mg]"
+    abundancelabels["eu_mg"] = "[Eu/Mg]"
+    zmax = 1500. # pc
+    vzmax = 75. # km / s
+
+    # plot
+    fig, ax = plot_some_abundances(galah, galcen)
+    fig.savefig("galah_full_sample.pdf")
+    plt.close(fig)
+
+    # make some plot sequences
     print("__main__: starting plotting cycle")
     # plotname, plotfunc = "offset_uphi", plot_uphis
     plotname, plotfunc = "lnvar_uvmax", plot_uvmaxs
@@ -231,21 +291,3 @@ if False:
     fig.savefig("galah_mg_angle.pdf")
     plt.close(fig)
 
-if False:
-
-    # decide what and how to plot
-    abundancenames = ["fe_h", "mg_fe", "o_fe", "al_fe", "mn_fe", "eu_fe"]
-    abundancelabels = {}
-    abundancelabels["fe_h"] = "[Fe/H]"
-    abundancelabels["mg_fe"] = "[Mg/Fe]"
-    abundancelabels["o_fe"] = "[O/Fe]"
-    abundancelabels["al_fe"] = "[Al/Fe]"
-    abundancelabels["mn_fe"] = "[Mn/Fe]"
-    abundancelabels["eu_fe"] = "[Eu/Fe]"
-    zmax = 1500. # pc
-    vzmax = 75. # km / s
-
-    # plot
-    fig, ax = plot_some_abundances(galah, galcen)
-    fig.savefig("galah_full_sample.pdf")
-    plt.close(fig)

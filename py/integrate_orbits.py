@@ -35,12 +35,13 @@ def leapfrog(vmax, dt, acceleration, pars):
     and pars[2:] are the acceleration pars.
     """
     zsun, vzsun = pars[0:2]
-    maxstep = 32768
+    maxstep = 32768 * 8
     zs = np.zeros(maxstep) - np.Inf
     vs = np.zeros(maxstep) - np.Inf
     zs[0] = 0.
     vs[0] = vmax
     v = vs[0]
+    phis = None
     for t in range(maxstep-1):
         zs[t + 1], vs[t + 1], v = leapfrog_step(zs[t], v, dt, acceleration, pars[2:])
         if zs[t] < 0. and zs[t+1] >= 0.:
@@ -48,6 +49,9 @@ def leapfrog(vmax, dt, acceleration, pars):
             period = dt * (t + fraction)
             phis = 2 * np.pi * np.arange(t+2) * dt / period
             break
+    if phis is None:
+        print("leapfrog: uh oh:", pars, t, zs[t + 1] / pc, vs[t + 1] / (km / s))
+        assert phis is not None
     return zs[:t+2] - zsun, vs[:t+2] - vzsun, phis
 
 def make_actions_angles_one(vmax, pars, timestep = 1e5 * yr):
@@ -60,7 +64,7 @@ def make_actions_angles_one(vmax, pars, timestep = 1e5 * yr):
     return zs, vs, vmaxs, phigrid
 
 def make_actions_angles(pars, vlim=75.):
-    vmaxlist = np.arange(2., vlim + 5., 4.) # magic numbers
+    vmaxlist = np.arange(5., vlim + 6., 10.) # magic numbers
     zs, vs, phis, vmaxs = [], [], [], []
     for vmax in vmaxlist:
         tzs, tvs, tphis, tvmaxs = make_actions_angles_one(vmax, pars)
