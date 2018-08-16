@@ -5,7 +5,7 @@ Copyright 2018 David W. Hogg (MPIA).
 bugs:
 -----
 - I don't know what parameters Pyia is using to go to Galactic 6-space.
-- stop cutting in z and vz and cut instead on vmax!
+- Fix the LF to marginalize out offset and slope. Should be possible.
 """
 
 from astropy.table import Table
@@ -17,20 +17,12 @@ import numpy as np
 from pyia import GaiaData
 from integrate_orbits import *
 
-def ln_like(qs, vmaxs, var, priormean, priorvar):
+def ln_like(pars, qs, vmaxs):
     """
-    I'm making shit up here.
+    Note the MAGIC 30.
     """
-    uvmaxs = np.unique(np.sort(vmaxs))
-    chi2 = 0.
-    for vmax in uvmaxs:
-        this = vmaxs == vmax
-        thisqs = qs[this]
-        denominator = 1. / priorvar + np.sum(this) / var
-        numerator = priormean / priorvar + np.sum(thisqs) / var
-        mean = numerator / denominator
-        chi2 += np.sum((thisqs - mean) ** 2 / var) - np.log(denominator) # made up!
-    return -0.5 * chi2
+    offset, slope, var = pars
+    return -0.5 * np.sum((qs - offset + slope * (vmaxs - 30.)) ** 2 / var) - 0.5 * np.log(var)
 
 def plot_some_abundances(galah, galcen):
     nx, ny = 3, 2
@@ -154,28 +146,60 @@ if __name__ == "__main__":
     # trim on coordinates
     zlim = 1500. # pc
     vlim =   75. # km / s
-    inbox = np.abs(vs) < (vlim + 1.)
+    inbox = (zs / zlim) ** 2 + (vs / vlim) ** 2 < 1.
     galah = galah[inbox]
     galcen = galcen[inbox]
     zs = galcen.z.to(u.pc).value
     vs = galcen.v_z.to(u.km/u.s).value
 
+    # plot abundance vs action for some standard potential
+    dynpars0 = np.array([10. * pc, 0.8 * km / s, 60. * sigunits, 400 * pc])
+    if False:
+        vmaxs, phis = paint_actions_angles(zs, vs, dynpars0)
+        plt.clf()
+        plt.plot(vmaxs + 2. * np.random.uniform(-1, 1, size=len(vmaxs)), galah.mg_fe, "k.", alpha=0.25)
+        plotx = np.array([0., 76.])
+        plt.plot(plotx, 0. + 0.004 * plotx, "r-", zorder=10)
+        plt.xlabel(r"$v_\mathrm{max}$ (km / s)")
+        plt.ylabel(r"[Mg / Fe] (dex)")
+        plt.savefig("slope.png")
+
     # plot some likelihood sequences
-    pars0 = np.array([10. * pc, 0.8 * km / s, 60. * sigunits, 400 * pc])
+    metalpars0 = np.array([0., 0.004, 0.04])
+    for i, name, scale in [(0, "offset", 0.2),
+                           (1, "slope", 0.001),
+                           (1, "var", 0.02)]:
+        parsis = metalpars0[i] + np.arange(-1., 1.001, 0.08) * scale
+        llfs = np.zeros_like(parsis)
+        for j, parsi in enumerate(parsis):
+            pars = 1. * metalpars0
+            pars[i] = parsi
+            vmaxs, phis = paint_actions_angles(zs, vs, dynpars0)
+            llfs[j] = ln_like(pars, galah.mg_fe, vmaxs)
+        plt.clf()
+        plt.plot(parsis, llfs, "ko", alpha=0.75)
+        plt.axvline(metalpars0[i], color="k", alpha=0.5, zorder = -10)
+        plt.xlabel(name)
+        plt.ylabel("log LF")
+        plt.savefig("lf_{}_test.png".format(name))
+
+if False:
+
+    # plot some likelihood sequences
     for i, units, name, scale in [(0, pc, "zsun", 5.),
                                 (1, km / s, "vsun", 1.),
                                 (2, sigunits, "sigma", 10.),
                                 (3, pc, "scaleheight", 100.)]:
-        parsis = pars0[i] + np.arange(-1., 1.001, 0.04) * scale * units
+        parsis = dynpars0[i] + np.arange(-1., 1.001, 0.04) * scale * units
         llfs = np.zeros_like(parsis)
         for j, parsi in enumerate(parsis):
-            pars = 1. * pars0
+            pars = 1. * dynpars0
             pars[i] = parsi
             vmaxs, phis = paint_actions_angles(zs, vs, pars)
             llfs[j] = ln_like(galah.mg_fe, vmaxs, 0.03 ** 2, 0., 1.) # made up shit
         plt.clf()
         plt.plot(parsis / units, llfs, "ko", alpha=0.75)
-        plt.axvline(pars0[i] / units, color="k", alpha=0.5, zorder = -10)
+        plt.axvline(dynpars0[i] / units, color="k", alpha=0.5, zorder = -10)
         plt.xlabel(name)
         plt.ylabel("log LF")
         plt.savefig("lf_{}_test.png".format(name))

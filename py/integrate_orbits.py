@@ -66,7 +66,7 @@ def make_actions_angles_one(vmax, pars, timestep = 1e5 * yr):
     return zs, vs, vmaxs, phigrid
 
 def make_actions_angles(pars, vlim=75.):
-    vmaxlist = np.arange(5., vlim + 6., 10.) # magic numbers
+    vmaxlist = np.arange(5., vlim + 1., 2.) # magic numbers
     zs, vs, phis, vmaxs = [], [], [], []
     for vmax in vmaxlist:
         tzs, tvs, tphis, tvmaxs = make_actions_angles_one(vmax, pars)
