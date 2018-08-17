@@ -8,9 +8,10 @@ notes:
 
 bugs / to-dos:
 --------------
-- Move the lf into this file from `galah.py`.
-- Make the lf with an explicit smooth function of actions for the mean. Like linear or quadratic.
 - Deal with edge stars by just assigning them to the largest action ring we have.
+- I have to replace the nearest-neighbors with a home-built 2-d interpolation. That might require making
+  the grid not in vmax, phi but in z, vz instead. That's some work but not a crazy amount.
+- In turn, the above requires something that can integrate both forwards and backwards in time to get the actions and angles. That could be run on every data point, or on a lookup table grid.
 """
 
 import numpy as np
@@ -25,6 +26,17 @@ km = 1000. # m
 s = 1. # s
 yr = 365.25 * 24. * 3600. * s
 sigunits = 1. * M_sun / (pc ** 2)
+
+def ln_like(pars, qs, vmaxs):
+    """
+    Note the MAGIC offset.
+    """
+    var = pars
+    offset = 30.
+    AT = np.vstack([np.ones_like(qs), vmaxs - offset])
+    A = AT.T
+    x = np.linalg.solve(np.dot(AT, A), np.dot(AT, qs))
+    return -0.5 * np.sum((qs - np.dot(A, x)) ** 2 / var + np.log(var))
 
 def leapfrog_step(z, v, dt, acceleration, pars):
     znew = z + v * dt

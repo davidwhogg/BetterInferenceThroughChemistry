@@ -17,17 +17,6 @@ import numpy as np
 from pyia import GaiaData
 from integrate_orbits import *
 
-def ln_like(pars, qs, vmaxs):
-    """
-    Note the MAGIC offset.
-    """
-    var = pars
-    offset = 30.
-    AT = np.vstack([np.ones_like(qs), vmaxs - offset])
-    A = AT.T
-    x = np.linalg.solve(np.dot(AT, A), np.dot(AT, qs))
-    return -0.5 * np.sum((qs - np.dot(A, x)) ** 2 / var + np.log(var))
-
 def plot_some_abundances(galah, galcen):
     nx, ny = 3, 2
     fig, ax = plt.subplots(ny, nx, figsize=(nx * 5, ny * 5), sharex=True, sharey=True)
