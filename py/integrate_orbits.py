@@ -10,8 +10,7 @@ bugs / to-dos:
 --------------
 - Deal with edge stars by just assigning them to the largest action ring we have.
 - I have to replace the nearest-neighbors with a home-built 2-d interpolation. That might require making
-  the grid not in vmax, phi but in z, vz instead. That's some work but not a crazy amount.
-- In turn, the above requires something that can integrate both forwards and backwards in time to get the actions and angles. That could be run on every data point, or on a lookup table grid.
+  the grid not in vmax, phi but in z, vz instead. That's some work but not a crazy amount. It's half-done now.
 """
 
 import numpy as np
@@ -25,6 +24,7 @@ M_sun = 1.9891e30 # kg
 km = 1000. # m
 s = 1. # s
 yr = 365.25 * 24. * 3600. * s
+Myr = 1.e6 * yr
 sigunits = 1. * M_sun / (pc ** 2)
 
 def ln_like(pars, qs, vmaxs):
@@ -43,12 +43,12 @@ def leapfrog_step(z, v, dt, acceleration, pars):
     dv = acceleration(znew, pars) * dt
     return znew, v + 0.5 * dv, v + dv
 
-def leapfrog(vmax, dt, acceleration, pars):
+def leapfrog_full_circle(vmax, dt, acceleration, pars):
     """
     assumes that pars[0:2] are the position and velocity of the barycenter,
     and pars[2:] are the acceleration pars.
     """
-    zsun, vzsun = pars[0:2]
+    zsun, vsun = pars[0:2]
     maxstep = 32768 * 8
     zs = np.zeros(maxstep) - np.Inf
     vs = np.zeros(maxstep) - np.Inf
@@ -66,12 +66,67 @@ def leapfrog(vmax, dt, acceleration, pars):
     if phis is None:
         print("leapfrog: uh oh:", pars, t, zs[t + 1] / pc, vs[t + 1] / (km / s))
         assert phis is not None
-    return zs[:t+2] - zsun, vs[:t+2] - vzsun, phis
+    return zs[:t+2] - zsun, vs[:t+2] - vsun, phis # z, vz = 0, 0 isn't where the Sun is
 
-def make_actions_angles_one(vmax, pars, timestep = 1e5 * yr):
+def hogg_max(ys):
+    assert len(ys) == 3
+    A = ys[1]
+    B = 0.5 * (ys[2] - ys[0])
+    C = (ys[2] + ys[0] - 2. * A)
+    return 1. - B / C, A - 0.5 * B * B / C
+
+def leapfrog_back_to_midplane(z, v, timestep, acceleration, pars):
+    zsun, vsun = pars[0:2]
+    maxstep = 32768
+    zs = np.zeros(maxstep)
+    vs = np.zeros(maxstep)
+    zs[0] = z + zsun # z = 0 isn't where the Sun is
+    vs[0] = v + vsun # same!
+    dt = -np.abs(timestep)
+    phis = None
+    for t in range(maxstep-1):
+        zs[t + 1], vs[t + 1], v = leapfrog_step(zs[t], v, dt, acceleration, pars[2:])
+        if zs[t + 1] < 0. and zs[t] >= 0.:
+            fraction = (0. - zs[t]) / (zs[t+1] - zs[t])
+            time_at_midplane = dt * (t + fraction)
+            vmax = vs[t] + acceleration(zs[t], pars[2:]) * fraction * dt \
+                + 0.5 * (acceleration(zs[t+1], pars[2:]) -
+                         acceleration(zs[t], pars[2:])) * dt * fraction * fraction
+            break
+    return vmax, time_at_midplane
+
+def leapfrog_forward_to_zmax(z, v, timestep, acceleration, pars):
+    zsun, vsun = pars[0:2]
+    maxstep = 32768
+    zs = np.zeros(maxstep)
+    vs = np.zeros(maxstep)
+    zs[0] = z + zsun # z = 0 isn't where the Sun is
+    vs[0] = v + vsun # same!
+    dt = np.abs(timestep)
+    phis = None
+    for t in range(maxstep-1):
+        zs[t + 1], vs[t + 1], v = leapfrog_step(zs[t], v, dt, acceleration, pars[2:])
+        if vs[t + 1] < 0. and vs[t] >= 0.:
+            fraction = (0. - vs[t]) / (vs[t+1] - vs[t])
+            time_at_zmax = dt * (t + fraction)
+            zmax = zs[t] + vs[t] * fraction * dt + 0.5 * (vs[t+1] - vs[t]) * dt * fraction * fraction
+            break
+    return zmax, time_at_zmax
+
+def make_actions_angles_one_quadrant(z, v, pars, timestep = 0.1 * Myr):
+    zsun, vsun = pars[0:2]
+    assert z + zsun > 0
+    assert v + vsun > 0
+    vmax, time_at_midplane = leapfrog_back_to_midplane(z, v, timestep, pure_sech, pars)
+    zmax, time_at_zmax = leapfrog_forward_to_zmax(z, v, timestep, pure_sech, pars)
+    phi = (0. - time_at_midplane) * 0.5 * np.pi / (time_at_zmax - time_at_midplane)
+    print(v / (km / s), vmax / (km / s), time_at_midplane / (Myr), z / (pc), zmax / (pc), time_at_zmax / (Myr), phi)
+    return zmax, vmax, phi
+
+def make_actions_angles_one(vmax, pars, timestep = 0.1 * Myr):
     Ngrid = 512
     phigrid = np.arange(np.pi / Ngrid, 2. * np.pi, 2. * np.pi / Ngrid)
-    zs, vs, phis = leapfrog(vmax * km / s, timestep, pure_sech, pars)
+    zs, vs, phis = leapfrog_full_circle(vmax * km / s, timestep, pure_sech, pars)
     zs = np.interp(phigrid, phis, zs / (pc))
     vs = np.interp(phigrid, phis, vs / (km / s))
     vmaxs = np.zeros_like(phigrid) + vmax
@@ -112,8 +167,63 @@ def dummy(z, pars):
 if __name__ == "__main__":
     import pylab as plt
     plt.rc('text', usetex=True)
-    pars = np.array([-10. * pc, 0. * km / s, 100. * sigunits, 400 * pc])
-    kmpspMyr = 1 * ((km / s) / (1e6 * yr))
+    pars = np.array([0., 0., 100. * sigunits, 400 * pc])
+    kmpspMyr = 1 * ((km / s) / (Myr))
+
+    zsun, vsun = pars[:2]
+    zgrid = np.arange(15., 1500.1, 30.) * (pc)
+    vgrid = np.arange(1., 75.1, 2.) * (km / s)
+    zs = np.outer(zgrid, np.ones_like(vgrid)).flatten()
+    vs = np.outer(np.ones_like(zgrid), vgrid).flatten()
+    zmaxs = np.zeros_like(zs)
+    vmaxs = np.zeros_like(zs)
+    phis = np.zeros_like(zs)
+    for i, (z, v) in enumerate(zip(zs, vs)):
+        zmaxs[i], vmaxs[i], phis[i] = make_actions_angles_one_quadrant(z, v, pars)
+    zs = np.append(zs, 1. * zs)
+    vs = np.append(vs, 0. - 1. * vs)
+    zmaxs = np.append(zmaxs, 1. * zmaxs)
+    vmaxs = np.append(vmaxs, 1. * vmaxs)
+    phis = np.append(phis, np.pi - phis)
+    zs = np.append(zs, 0. - 1. * zs)
+    vs = np.append(vs, 1. * vs)
+    zmaxs = np.append(zmaxs, 1. * zmaxs)
+    vmaxs = np.append(vmaxs, 1. * vmaxs)
+    phis = np.append(phis, 2. * np.pi - phis)
+    plt.clf()
+    plt.scatter(vs / (km / s), zs / (pc), c=(zmaxs / (pc)), alpha=0.5)
+    plt.colorbar()
+    plt.savefig("deleteme1.png")
+    plt.clf()
+    plt.scatter(vs / (km / s), zs / (pc), c=(vmaxs / (km / s)), alpha=0.5)
+    plt.colorbar()
+    plt.savefig("deleteme2.png")
+    plt.clf()
+    plt.scatter(vs / (km / s), zs / (pc), c=(phis * 180. / np.pi), alpha=0.5)
+    plt.colorbar()
+    plt.savefig("deleteme3.png")
+
+    uzs = np.unique(np.sort(zs))
+    print(uzs)
+    for uz in uzs:
+        if uz > 155.5 * pc:
+            I = zs == uz
+            plt.clf()
+            plt.plot(vs[I] / (km / s), phis[I], "ko", alpha=0.5)
+            plt.savefig("deleteme4.png")
+            break
+
+    uvs = np.unique(np.sort(vs))
+    print(uzs)
+    for uv in uvs:
+        if uv > -20.5 * km / s:
+            I = vs == uv
+            plt.clf()
+            plt.plot(zs[I] / (pc), phis[I], "ko", alpha=0.5)
+            plt.savefig("deleteme5.png")
+            break
+
+if False:
 
     plt.clf()
     dz = 1.
@@ -171,7 +281,7 @@ if False:
     pars[1] = 1.5 * (km / 2)
     plt.clf()
     for vmax in np.arange(1., 30., 2.):
-        zs, vs, phis = leapfrog(vmax * km / s, 1e5 * yr, pure_exponential, pars)
+        zs, vs, phis = leapfrog_full_circle(vmax * km / s, 1e5 * yr, pure_exponential, pars)
         zs = zs / (pc)
         vs = vs / (km / s)
         plt.plot(phis, zs, "k-", alpha=0.5)
@@ -182,7 +292,7 @@ if False:
 
     plt.clf()
     for vmax in np.arange(1., 30., 2.):
-        zs, vs, phis = leapfrog(vmax * km / s, 1e5 * yr, pure_exponential, pars)
+        zs, vs, phis = leapfrog_full_circle(vmax * km / s, 1e5 * yr, pure_exponential, pars)
         zs = zs / (pc)
         vs = vs / (km / s)
         plt.plot(phis, vs, "k-", alpha=0.5)
