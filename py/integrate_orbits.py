@@ -66,7 +66,7 @@ def make_actions_angles_one(vmax, pars, timestep = 1e5 * yr):
     return zs, vs, vmaxs, phigrid
 
 def make_actions_angles(pars, vlim=75.):
-    vmaxlist = np.arange(5., vlim + 1., 2.) # magic numbers
+    vmaxlist = np.arange(1., vlim + 0.001, 1.) # magic numbers
     zs, vs, phis, vmaxs = [], [], [], []
     for vmax in vmaxlist:
         tzs, tvs, tphis, tvmaxs = make_actions_angles_one(vmax, pars)
@@ -77,7 +77,7 @@ def make_actions_angles(pars, vlim=75.):
     return zs, vs, vmaxs, phis
 
 def paint_actions_angles(atzs, atvs, pars):
-    print("paint_actions_angles: intgrating orbits")
+    print("paint_actions_angles: integrating orbits")
     zs, vs, phis, vmaxs = make_actions_angles(pars)
     print("paint_actions_angles: making KDTree")
     tree = KDTree(np.vstack([(zs / 1500.).T, (vs / 75.).T]).T)

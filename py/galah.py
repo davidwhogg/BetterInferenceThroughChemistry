@@ -156,8 +156,11 @@ if __name__ == "__main__":
     zs = galcen.z.to(u.pc).value
     vs = galcen.v_z.to(u.km/u.s).value
 
+    # set fiducial parameters
+    dynpars0 = np.array([10. * pc, 1.25 * km / s, 62.5 * sigunits, 370 * pc])
+    metalpars0 = np.array([0.0382])
+
     # plot abundance vs action for some standard potential
-    dynpars0 = np.array([10. * pc, 0.8 * km / s, 60. * sigunits, 400 * pc])
     if False:
         vmaxs, phis = paint_actions_angles(zs, vs, dynpars0)
         plt.clf()
@@ -169,29 +172,30 @@ if __name__ == "__main__":
         plt.savefig("slope.png")
 
     # plot some likelihood sequences
-    metalpars0 = np.array([0.038])
-    for i, name, scale in [(0, "var", 0.002)]:
+    vmaxs, phis = paint_actions_angles(zs, vs, dynpars0)
+    for i, name, scale in [(0, "var", 0.002)
+                           ]:
         parsis = metalpars0[i] + np.arange(-1., 1.001, 0.08) * scale
         llfs = np.zeros_like(parsis)
         for j, parsi in enumerate(parsis):
             pars = 1. * metalpars0
             pars[i] = parsi
-            vmaxs, phis = paint_actions_angles(zs, vs, dynpars0)
             llfs[j] = ln_like(pars, galah.mg_fe, vmaxs)
         plt.clf()
         plt.plot(parsis, llfs, "ko", alpha=0.75)
         plt.axvline(metalpars0[i], color="k", alpha=0.5, zorder = -10)
-        plt.xlim(np.max(llfs)-100., np.max(llfs))
+        plt.ylim(np.max(llfs)-30., np.max(llfs)+3.)
         plt.xlabel(name)
         plt.ylabel("log LF")
         plt.savefig("lf_{}_test.png".format(name))
 
     # plot some likelihood sequences
-    for i, units, name, scale in [(0, pc, "zsun", 5.),
-                                (1, km / s, "vsun", 1.),
-                                (2, sigunits, "sigma", 10.),
-                                (3, pc, "scaleheight", 100.)]:
-        parsis = dynpars0[i] + np.arange(-1., 1.001, 0.04) * scale * units
+    for i, units, name, scale in [(0, pc, "zsun", 30.),
+                                  (1, km / s, "vsun", 5.),
+                                  (2, sigunits, "sigma", 10.),
+                                  (3, pc, "scaleheight", 200.)
+                                  ]:
+        parsis = dynpars0[i] + np.arange(-1., 1.001, 0.01) * scale * units
         llfs = np.zeros_like(parsis)
         for j, parsi in enumerate(parsis):
             pars = 1. * dynpars0
@@ -201,6 +205,7 @@ if __name__ == "__main__":
         plt.clf()
         plt.plot(parsis / units, llfs, "ko", alpha=0.75)
         plt.axvline(dynpars0[i] / units, color="k", alpha=0.5, zorder = -10)
+        plt.ylim(np.max(llfs)-30., np.max(llfs)+3.)
         plt.xlabel(name)
         plt.ylabel("log LF")
         plt.savefig("lf_{}_test.png".format(name))
