@@ -8,6 +8,7 @@ notes:
 
 bugs / to-dos:
 --------------
+- I need to separate the dynpars from the sunpars (from the metalpars).
 - Deal with edge stars by just assigning them to the largest action ring we have.
 - I have to replace the nearest-neighbors with a home-built 2-d interpolation. That might require making
   the grid not in vmax, phi but in z, vz instead. That's some work but not a crazy amount. It's half-done now.
@@ -216,7 +217,7 @@ if __name__ == "__main__":
     uvs = np.unique(np.sort(vs))
     print(uzs)
     for uv in uvs:
-        if uv > -20.5 * km / s:
+        if uv > -10.5 * km / s:
             I = vs == uv
             plt.clf()
             plt.plot(zs[I] / (pc), phis[I], "ko", alpha=0.5)
