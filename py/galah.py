@@ -168,7 +168,7 @@ if __name__ == "__main__":
     metalpars0 = np.array([0., 0.004, 0.04])
     for i, name, scale in [(0, "offset", 0.2),
                            (1, "slope", 0.001),
-                           (1, "var", 0.02)]:
+                           (2, "var", 0.02)]:
         parsis = metalpars0[i] + np.arange(-1., 1.001, 0.08) * scale
         llfs = np.zeros_like(parsis)
         for j, parsi in enumerate(parsis):
