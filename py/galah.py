@@ -5,7 +5,7 @@ Copyright 2018 David W. Hogg (MPIA).
 bugs:
 -----
 - I don't know what parameters Pyia is using to go to Galactic 6-space.
-- Fix the LF to marginalize out offset and slope. Should be possible.
+- Fix the LF to marginalize out offset and slope. Should be possible. Right now it just sets it to ML.
 """
 
 from astropy.table import Table
@@ -19,10 +19,14 @@ from integrate_orbits import *
 
 def ln_like(pars, qs, vmaxs):
     """
-    Note the MAGIC 30.
+    Note the MAGIC offset.
     """
-    offset, slope, var = pars
-    return -0.5 * np.sum((qs - offset + slope * (vmaxs - 30.)) ** 2 / var) - 0.5 * np.log(var)
+    var = pars
+    offset = 30.
+    AT = np.vstack([np.ones_like(qs), vmaxs - offset])
+    A = AT.T
+    x = np.linalg.solve(np.dot(AT, A), np.dot(AT, qs))
+    return -0.5 * np.sum((qs - np.dot(A, x)) ** 2 / var + np.log(var))
 
 def plot_some_abundances(galah, galcen):
     nx, ny = 3, 2
@@ -165,10 +169,8 @@ if __name__ == "__main__":
         plt.savefig("slope.png")
 
     # plot some likelihood sequences
-    metalpars0 = np.array([0., 0.004, 0.04])
-    for i, name, scale in [(0, "offset", 0.2),
-                           (1, "slope", 0.001),
-                           (2, "var", 0.02)]:
+    metalpars0 = np.array([0.038])
+    for i, name, scale in [(0, "var", 0.002)]:
         parsis = metalpars0[i] + np.arange(-1., 1.001, 0.08) * scale
         llfs = np.zeros_like(parsis)
         for j, parsi in enumerate(parsis):
@@ -179,11 +181,10 @@ if __name__ == "__main__":
         plt.clf()
         plt.plot(parsis, llfs, "ko", alpha=0.75)
         plt.axvline(metalpars0[i], color="k", alpha=0.5, zorder = -10)
+        plt.xlim(np.max(llfs)-100., np.max(llfs))
         plt.xlabel(name)
         plt.ylabel("log LF")
         plt.savefig("lf_{}_test.png".format(name))
-
-if False:
 
     # plot some likelihood sequences
     for i, units, name, scale in [(0, pc, "zsun", 5.),
@@ -196,7 +197,7 @@ if False:
             pars = 1. * dynpars0
             pars[i] = parsi
             vmaxs, phis = paint_actions_angles(zs, vs, pars)
-            llfs[j] = ln_like(galah.mg_fe, vmaxs, 0.03 ** 2, 0., 1.) # made up shit
+            llfs[j] = ln_like(metalpars0, galah.mg_fe, vmaxs)
         plt.clf()
         plt.plot(parsis / units, llfs, "ko", alpha=0.75)
         plt.axvline(dynpars0[i] / units, color="k", alpha=0.5, zorder = -10)
