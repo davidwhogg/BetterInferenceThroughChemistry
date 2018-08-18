@@ -158,8 +158,8 @@ if __name__ == "__main__":
     vs = galcen.v_z.to(u.km/u.s).value
 
     # set fiducial parameters
-    sunpars0 = np.array([10. * pc, 1.25 * km / s])
-    dynpars0 = np.array([62.5 * sigunits, 370 * pc])
+    sunpars0 = np.array([0. * pc, 0. * km / s])
+    dynpars0 = np.array([62.5 * sigunits, 400 * pc])
     metalpars0 = np.array([0.0382])
 
     # plot abundance vs action for some standard potential
@@ -174,11 +174,11 @@ if __name__ == "__main__":
         plt.savefig("slope.png")
 
     # plot some likelihood sequences
-    for k, units, name, scale in [(0, pc, "zsun", 30.),
-                                  (1, km / s, "vsun", 5.),
-                                  (2, sigunits, "sigma", 10.),
-                                  (3, pc, "scaleheight", 200.),
-                                  (4, 1., "var", 0.002),
+    for k, units, name, scale in [(0, pc, "zsun", 40.),
+                                  (1, km / s, "vsun", 4.),
+                                  (2, sigunits, "sigma", 15.),
+                                  (3, pc, "scaleheight", 300.),
+                                  (4, 1., "var", 0.0015),
                                   ]:
         sunpars = 1. * sunpars0
         dynpars = 1. * dynpars0
