@@ -46,8 +46,7 @@ def leapfrog_step(z, v, dt, acceleration, pars):
 
 def leapfrog_full_circle(vmax, dt, acceleration, pars):
     """
-    assumes that pars[0:2] are the position and velocity of the barycenter,
-    and pars[2:] are the acceleration pars.
+    should remove zsun, vsun from all these functions
     """
     zsun, vsun = pars[0:2]
     maxstep = 32768 * 8
@@ -69,15 +68,13 @@ def leapfrog_full_circle(vmax, dt, acceleration, pars):
         assert phis is not None
     return zs[:t+2] - zsun, vs[:t+2] - vsun, phis # z, vz = 0, 0 isn't where the Sun is
 
-def hogg_max(ys):
-    assert len(ys) == 3
-    A = ys[1]
-    B = 0.5 * (ys[2] - ys[0])
-    C = (ys[2] + ys[0] - 2. * A)
-    return 1. - B / C, A - 0.5 * B * B / C
-
 def leapfrog_back_to_midplane(z, v, timestep, acceleration, pars):
+    """
+    should remove zsun, vsun from all these functions
+    """
     zsun, vsun = pars[0:2]
+    if z + zsun == 0:
+        return v + vsun, 0.
     maxstep = 32768
     zs = np.zeros(maxstep)
     vs = np.zeros(maxstep)
@@ -97,7 +94,12 @@ def leapfrog_back_to_midplane(z, v, timestep, acceleration, pars):
     return vmax, time_at_midplane
 
 def leapfrog_forward_to_zmax(z, v, timestep, acceleration, pars):
+    """
+    should remove zsun, vsun from all these functions
+    """
     zsun, vsun = pars[0:2]
+    if v + vsun == 0:
+        return z + zsun, 0.
     maxstep = 32768
     zs = np.zeros(maxstep)
     vs = np.zeros(maxstep)
@@ -115,9 +117,14 @@ def leapfrog_forward_to_zmax(z, v, timestep, acceleration, pars):
     return zmax, time_at_zmax
 
 def make_actions_angles_one_quadrant(z, v, pars, timestep = 0.1 * Myr):
+    """
+    should remove zsun, vsun from all these functions
+    """
     zsun, vsun = pars[0:2]
-    assert z + zsun > 0
-    assert v + vsun > 0
+    assert z + zsun >= 0.
+    assert v + vsun >= 0.
+    if z + zsun == 0. and v + vsun == 0.: # horrible special case
+        return 0., 0., 0.25 * np.pi
     vmax, time_at_midplane = leapfrog_back_to_midplane(z, v, timestep, pure_sech, pars)
     zmax, time_at_zmax = leapfrog_forward_to_zmax(z, v, timestep, pure_sech, pars)
     phi = (0. - time_at_midplane) * 0.5 * np.pi / (time_at_zmax - time_at_midplane)
@@ -172,8 +179,8 @@ if __name__ == "__main__":
     kmpspMyr = 1 * ((km / s) / (Myr))
 
     zsun, vsun = pars[:2]
-    zgrid = np.arange(15., 1500.1, 30.) * (pc)
-    vgrid = np.arange(1., 75.1, 2.) * (km / s)
+    zgrid = np.arange(0., 1500.1, 60.) * (pc)
+    vgrid = np.arange(0., 75.1, 3.) * (km / s)
     zs = np.outer(zgrid, np.ones_like(vgrid)).flatten()
     vs = np.outer(np.ones_like(zgrid), vgrid).flatten()
     zmaxs = np.zeros_like(zs)
@@ -181,16 +188,18 @@ if __name__ == "__main__":
     phis = np.zeros_like(zs)
     for i, (z, v) in enumerate(zip(zs, vs)):
         zmaxs[i], vmaxs[i], phis[i] = make_actions_angles_one_quadrant(z, v, pars)
-    zs = np.append(zs, 1. * zs)
-    vs = np.append(vs, 0. - 1. * vs)
-    zmaxs = np.append(zmaxs, 1. * zmaxs)
-    vmaxs = np.append(vmaxs, 1. * vmaxs)
+    """
+    zs = np.append(zs, zs)
+    vs = np.append(vs, 0. - vs)
+    zmaxs = np.append(zmaxs, zmaxs)
+    vmaxs = np.append(vmaxs, vmaxs)
     phis = np.append(phis, np.pi - phis)
-    zs = np.append(zs, 0. - 1. * zs)
-    vs = np.append(vs, 1. * vs)
-    zmaxs = np.append(zmaxs, 1. * zmaxs)
-    vmaxs = np.append(vmaxs, 1. * vmaxs)
+    zs = np.append(zs, 0. - zs)
+    vs = np.append(vs, vs)
+    zmaxs = np.append(zmaxs, zmaxs)
+    vmaxs = np.append(vmaxs, vmaxs)
     phis = np.append(phis, 2. * np.pi - phis)
+    """
     plt.clf()
     plt.scatter(vs / (km / s), zs / (pc), c=(zmaxs / (pc)), alpha=0.5)
     plt.colorbar()
@@ -205,21 +214,27 @@ if __name__ == "__main__":
     plt.savefig("deleteme3.png")
 
     uzs = np.unique(np.sort(zs))
-    print(uzs)
+    TINY = 1e-3 * pc
     for uz in uzs:
-        if uz > 155.5 * pc:
+        if uz < TINY:
             I = zs == uz
             plt.clf()
+            plt.plot(vs[I] / (km / s), phis[I], "ro", alpha=0.5)
+        if uz > 155.5 * pc:
+            I = zs == uz
             plt.plot(vs[I] / (km / s), phis[I], "ko", alpha=0.5)
             plt.savefig("deleteme4.png")
             break
 
     uvs = np.unique(np.sort(vs))
-    print(uzs)
+    TINY = 1e-3 * km / s
     for uv in uvs:
-        if uv > -10.5 * km / s:
+        if uv < TINY:
             I = vs == uv
             plt.clf()
+            plt.plot(zs[I] / (pc), phis[I], "ro", alpha=0.5)
+        if uv > 20. * km / s:
+            I = vs == uv
             plt.plot(zs[I] / (pc), phis[I], "ko", alpha=0.5)
             plt.savefig("deleteme5.png")
             break
