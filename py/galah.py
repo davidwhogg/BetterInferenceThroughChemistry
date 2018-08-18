@@ -4,8 +4,10 @@ Copyright 2018 David W. Hogg (MPIA).
 
 bugs:
 -----
-- I don't know what parameters Pyia is using to go to Galactic 6-space.
-- Fix the LF to marginalize out offset and slope. Should be possible. Right now it just sets it to ML.
+- I don't know what parameters Pyia is using to go to Galactic
+  6-space.
+- Fix the LF to marginalize out offset and slope. Should be
+  possible. Right now it just sets it to ML.
 """
 
 from astropy.table import Table
@@ -42,11 +44,15 @@ def plot_some_abundances(galah, galcen):
 
 def plot_uphis(galah, galcen, parindex, offset):
     # get actions and angles
-    pars = np.array([0. * pc, 2. * km / s, 65. * sigunits, 350 * pc])
-    pars[parindex] += offset
-    zs = galcen.z.to(u.pc).value
-    vs = galcen.v_z.to(u.km/u.s).value
-    vmaxs, phis = paint_actions_angles(zs, vs, pars)
+    sunpars = np.array([0. * pc, 2. * km / s])
+    dynpars = np.array([65. * sigunits, 350 * pc])
+    if parindex < 2:
+        sunpars[parindex] += offset
+    else:
+        dynpars[parindex - 2] += offset
+    zs = galcen.z.to(u.pc).value + sunpars[0] / pc
+    vs = galcen.v_z.to(u.km/u.s).value + sunpars[1] / (km / s)
+    vmaxs, phis, blob = paint_actions_angles(zs, vs, dynpars)
     # exclude inner and outer rings, as it were
     good = (vmaxs > (np.min(vmaxs) + 0.1)) & (vmaxs < (np.max(vmaxs) - 0.1))
     vmaxs = vmaxs[good]
@@ -76,16 +82,20 @@ def plot_uphis(galah, galcen, parindex, offset):
     ax.set_xlim(0, 2 * np.pi)
     ax.set_ylim(-0.2, 0.2)
     plt.title(r"$z = {:.1f}$ pc; $v_z = {:.1f}$ km/s; $\Sigma = {:.0f}$ M/pc$^2$; $h = {:.0f}$ pc".format(
-            pars[0] / (pc), pars[1] / (km / s), pars[2] / (sigunits), pars[3] / (pc)))
+            sunpars[0] / (pc), sunpars[1] / (km / s), dynpars[0] / (sigunits), dynpars[1] / (pc)))
     return fig, ax
 
 def plot_uvmaxs(galah, galcen, parindex, offset):
     # get actions and angles
-    pars = np.array([0. * pc, 2. * km / s, 65. * sigunits, 400 * pc])
-    pars[parindex] += offset
-    zs = galcen.z.to(u.pc).value
-    vs = galcen.v_z.to(u.km/u.s).value
-    vmaxs, phis = paint_actions_angles(zs, vs, pars)
+    sunpars = np.array([0. * pc, 2. * km / s])
+    dynpars = np.array([65. * sigunits, 400 * pc])
+    if parindex < 2:
+        sunpars[parindex] += offset
+    else:
+        dynpars[parindex - 2] += offset
+    zs = galcen.z.to(u.pc).value + sunpars[0] / pc
+    vs = galcen.v_z.to(u.km/u.s).value + sunpars[1] / (km / s)
+    vmaxs, phis, blob = paint_actions_angles(zs, vs, dynpars)
     # exclude inner and outer rings, as it were
     good = (vmaxs > (np.min(vmaxs) + 0.1)) & (vmaxs < (np.max(vmaxs) - 0.1))
     vmaxs = vmaxs[good]
@@ -114,7 +124,7 @@ def plot_uvmaxs(galah, galcen, parindex, offset):
     ax.set_xlim(0., 80.) # km/s
     ax.set_ylim(-4., -3.) # nats
     plt.title(r"$z = {:.1f}$ pc; $v_z = {:.1f}$ km/s; $\Sigma = {:.0f}$ M/pc$^2$; $h = {:.0f}$ pc".format(
-            pars[0] / (pc), pars[1] / (km / s), pars[2] / (sigunits), pars[3] / (pc)))
+            sunpars[0] / (pc), sunpars[1] / (km / s), dynpars[0] / (sigunits), dynpars[1] / (pc)))
     return fig, ax
 
 if __name__ == "__main__":
@@ -142,16 +152,19 @@ if __name__ == "__main__":
     inbox = (zs / zlim) ** 2 + (vs / vlim) ** 2 < 1.
     galah = galah[inbox]
     galcen = galcen[inbox]
+
+    # make phase space
     zs = galcen.z.to(u.pc).value
     vs = galcen.v_z.to(u.km/u.s).value
 
     # set fiducial parameters
-    dynpars0 = np.array([10. * pc, 1.25 * km / s, 62.5 * sigunits, 370 * pc])
+    sunpars0 = np.array([10. * pc, 1.25 * km / s])
+    dynpars0 = np.array([62.5 * sigunits, 370 * pc])
     metalpars0 = np.array([0.0382])
 
     # plot abundance vs action for some standard potential
     if False:
-        vmaxs, phis = paint_actions_angles(zs, vs, dynpars0)
+        vmaxs, phis, blob = paint_actions_angles(zs, vs, sunpars0, dynpars0)
         plt.clf()
         plt.plot(vmaxs + 2. * np.random.uniform(-1, 1, size=len(vmaxs)), galah.mg_fe, "k.", alpha=0.25)
         plotx = np.array([0., 76.])
@@ -161,39 +174,38 @@ if __name__ == "__main__":
         plt.savefig("slope.png")
 
     # plot some likelihood sequences
-    vmaxs, phis = paint_actions_angles(zs, vs, dynpars0)
-    for i, name, scale in [(0, "var", 0.002)
-                           ]:
-        parsis = metalpars0[i] + np.arange(-1., 1.001, 0.08) * scale
-        llfs = np.zeros_like(parsis)
-        for j, parsi in enumerate(parsis):
-            pars = 1. * metalpars0
-            pars[i] = parsi
-            llfs[j] = ln_like(pars, galah.mg_fe, vmaxs)
-        plt.clf()
-        plt.plot(parsis, llfs, "ko", alpha=0.75)
-        plt.axvline(metalpars0[i], color="k", alpha=0.5, zorder = -10)
-        plt.ylim(np.max(llfs)-30., np.max(llfs)+3.)
-        plt.xlabel(name)
-        plt.ylabel("log LF")
-        plt.savefig("lf_{}_test.png".format(name))
-
-    # plot some likelihood sequences
-    for i, units, name, scale in [(0, pc, "zsun", 30.),
+    for k, units, name, scale in [(0, pc, "zsun", 30.),
                                   (1, km / s, "vsun", 5.),
                                   (2, sigunits, "sigma", 10.),
-                                  (3, pc, "scaleheight", 200.)
+                                  (3, pc, "scaleheight", 200.),
+                                  (4, 1., "var", 0.002),
                                   ]:
-        parsis = dynpars0[i] + np.arange(-1., 1.001, 0.01) * scale * units
+        sunpars = 1. * sunpars0
+        dynpars = 1. * dynpars0
+        metalpars = 1. * metalpars0
+        if k < 2:
+            pars = sunpars
+            i = k
+            recompute_tree = False
+        elif k < 4:
+            pars = dynpars
+            i = k - 2
+            recompute_tree = True
+        else:
+            pars = metalpars
+            i = k - 4
+            recompute_tree = False
+        parsis = pars[i] + np.arange(-1., 1.001, 0.01) * scale * units
         llfs = np.zeros_like(parsis)
+        blob = None
         for j, parsi in enumerate(parsis):
-            pars = 1. * dynpars0
             pars[i] = parsi
-            vmaxs, phis = paint_actions_angles(zs, vs, pars)
-            llfs[j] = ln_like(metalpars0, galah.mg_fe, vmaxs)
+            if recompute_tree:
+                blob = None
+            vmaxs, phis, blob = paint_actions_angles(zs, vs, sunpars, dynpars, blob=blob)
+            llfs[j] = ln_like(metalpars, galah.mg_fe, vmaxs)
         plt.clf()
         plt.plot(parsis / units, llfs, "ko", alpha=0.75)
-        plt.axvline(dynpars0[i] / units, color="k", alpha=0.5, zorder = -10)
         plt.ylim(np.max(llfs)-30., np.max(llfs)+3.)
         plt.xlabel(name)
         plt.ylabel("log LF")

@@ -16,7 +16,8 @@ bugs / to-dos:
 - I have to replace the nearest-neighbors with a home-built 2-d
   interpolation. That might require making the grid not in vmax, phi
   but in z, vz instead. That's some work but not a crazy amount. It's
-  half-done now.
+  half-done now. The interpolation should take the look-up table as
+  an input, because we don't always need to recompute it.
 """
 
 import numpy as np
@@ -139,15 +140,21 @@ def make_actions_angles(pars, vlim=75.):
         vmaxs = np.append(vmaxs, tvmaxs)
     return zs, vs, vmaxs, phis
 
-def paint_actions_angles(atzs, atvs, pars):
-    print("paint_actions_angles: integrating orbits")
-    zs, vs, phis, vmaxs = make_actions_angles(pars)
-    print("paint_actions_angles: making KDTree")
-    tree = KDTree(np.vstack([(zs / 1500.).T, (vs / 75.).T]).T)
+def paint_actions_angles(atzs, atvs, sunpars, dynpars, blob=None):
+    if blob is None:
+        print("paint_actions_angles: integrating orbits")
+        zs, vs, phis, vmaxs = make_actions_angles(dynpars)
+        print("paint_actions_angles: making KDTree")
+        tree = KDTree(np.vstack([(zs / 1500.).T, (vs / 75.).T]).T)
+        blob = (phis, vmaxs, tree)
+    else:
+        phis, vmaxs, tree = blob
     print("paint_actions_angles: getting nearest neighbors")
-    inds = tree.query(np.vstack([(atzs / 1500.).T, (atvs / 75.).T]).T, return_distance=False)
+    inzs = atzs + sunpars[0] / pc
+    invs = atvs + sunpars[1] / (km / s)
+    inds = tree.query(np.vstack([(inzs / 1500.).T, (invs / 75.).T]).T, return_distance=False)
     print("paint_actions_angles: done")
-    return vmaxs[inds].flatten(), phis[inds].flatten()
+    return vmaxs[inds].flatten(), phis[inds].flatten(), blob
 
 def pure_sech(z, pars):
     surfacedensity, scaleheight = pars
@@ -243,7 +250,7 @@ if False:
     Nstars = 1000
     zs = zlim * (np.random.uniform(size=Nstars) * 2. - 1)
     vs = vlim * (np.random.uniform(size=Nstars) * 2. - 1)
-    vmaxs, phis = paint_actions_angles(zs, vs, pars)
+    vmaxs, phis, blob = paint_actions_angles(zs, vs, pars)
 
     fig, ax = plt.subplots(1, 1, figsize=(5, 5), sharex=True, sharey=True)
     plt.scatter(vs, zs, c=phis, s=10.)
