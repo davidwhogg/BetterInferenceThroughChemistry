@@ -79,19 +79,20 @@ In this way they are like dynamical actions that are invariant along a stellar t
 % aims
 Here we capitalize on the invariance of element abundances to identify dynamical
 invariants, by using the fact that---for a phase-mixed population---the abundance
-distribution ought to depend only on dynamical invariants, but not at all on time-variable
-dynamical phases (conjugate actions).
+distribution ought to depend only on dynamical invariants (such as the actions)
+but not at all on time-variable coordinates (such as the conjugate angles).
 That is, the stellar orbits should be tangent everywhere to the
 element-abundance level hyper-surfaces or iso-abundance contours in 6-d phase
 space, or orthogonal to the 6-d abundance gradients.
 For a first project, we consider only the vertical structure and dynamics of the Milky Way
 disk and only a few abundances, to demonstrate feasibility.
 % methods
-We make use of \galah\ data on red-giant stars in the Solar Neighborhood.
-We parameterize the vertical density structure of the disk with a central density, an
-exponential scale height, and a vertical location of the mid-plane.
-We fit the abundance distribution as a Gaussian with a mean and variance that depend
-on dynamical invariants computed from the parameterized density structure.
+We make use of \galah\ and \gaia\ data on red-giant stars in the Solar Neighborhood.
+We parameterize the vertical density structure of the disk with a hyperbolic secant density
+structure parameterized by a central density and an
+exponential scale height.
+We fit the abundance distribution as a Gaussian with a mean and variance that depends
+smoothly vertical action (which is conditioned on the parameterized density structure).
 % results
 We find FOO WHATEVER.
 These chemical-tangents methods have great advantages over other methods
@@ -99,7 +100,7 @@ for inferring dynamical actions or orbits: They are not sensitive to spectroscop
 selection functions, which have aspects that can't be known precisely; they
 do not require taking second moments of velocity data, which are not usually measured
 well; and they do not require a full forward model of the distribution function,
-which is hard to model or marginalize with sufficient flexibility.
+which is hard to model with sufficient flexibility.
 \end{abstract}
 
 \keywords{
