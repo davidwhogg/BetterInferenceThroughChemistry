@@ -11,8 +11,9 @@ notes:
 
 bugs / to-dos:
 --------------
-- Deal with edge stars by just assigning them to the largest action
-  ring we have.
+- Should be calculating actions properly, not zmax and vmax. The
+  actions are more stable to calculate anyway! And have better
+  geometric properties!
 - I have to replace the nearest-neighbors with a home-built 2-d
   interpolation. That might require making the grid not in vmax, phi
   but in z, vz instead. That's some work but not a crazy amount. It's
@@ -117,44 +118,74 @@ def make_actions_angles_one_quadrant(z, v, pars, timestep = 0.1 * Myr):
     vmax, time_at_midplane = leapfrog_back_to_midplane(z, v, timestep, pure_sech, pars)
     zmax, time_at_zmax = leapfrog_forward_to_zmax(z, v, timestep, pure_sech, pars)
     phi = (0. - time_at_midplane) * 0.5 * np.pi / (time_at_zmax - time_at_midplane)
-    print(v / (km / s), vmax / (km / s), time_at_midplane / (Myr), z / (pc), zmax / (pc), time_at_zmax / (Myr), phi)
     return zmax, vmax, phi
 
-def make_actions_angles_one(vmax, pars, timestep = 0.1 * Myr):
-    Ngrid = 512
-    phigrid = np.arange(np.pi / Ngrid, 2. * np.pi, 2. * np.pi / Ngrid)
-    zs, vs, phis = leapfrog_full_circle(vmax * km / s, timestep, pure_sech, pars)
-    zs = np.interp(phigrid, phis, zs / (pc))
-    vs = np.interp(phigrid, phis, vs / (km / s))
-    vmaxs = np.zeros_like(phigrid) + vmax
-    return zs, vs, vmaxs, phigrid
+def make_action_angle_grid(zgrid, vgrid, pars):
+    zs = np.outer(zgrid, np.ones_like(vgrid))
+    vs = np.outer(np.ones_like(zgrid), vgrid)
+    zmaxs = np.zeros_like(zs)
+    vmaxs = np.zeros_like(zs)
+    phis = np.zeros_like(zs)
+    for i in range(len(zgrid)):
+        for j in range(len(vgrid)):
+            zmaxs[i, j], vmaxs[i, j], phis[i, j] = make_actions_angles_one_quadrant(zs[i, j], vs[i, j], pars)
+    return zs, vs, zmaxs, vmaxs, phis
 
-def make_actions_angles(pars, vlim=75.):
-    vmaxlist = np.arange(1., vlim + 0.001, 1.) # magic numbers
-    zs, vs, phis, vmaxs = [], [], [], []
-    for vmax in vmaxlist:
-        tzs, tvs, tphis, tvmaxs = make_actions_angles_one(vmax, pars)
-        zs = np.append(zs, tzs) # bad!
-        vs = np.append(vs, tvs)
-        phis = np.append(phis, tphis)
-        vmaxs = np.append(vmaxs, tvmaxs)
-    return zs, vs, vmaxs, phis
+def linearly_interpolate(inzs, invs, blob):
+    """
+    comments:
+    - synchronized with `paint_actions_angles()`
+    - deals with edge case by snapping to edge
+
+    issues:
+    - tons of repeated code
+    - note `TINY`
+    """
+    dz, nz, dv, nv, xs, ys = blob
+    TINY = 1.e-9 # dimensionless
+    zindrs = np.clip(inzs / dz, TINY, nz - TINY)
+    vindrs = np.clip(invs / dv, TINY, nv - TINY)
+    zinds = zindrs.astype(int)
+    vinds = vindrs.astype(int)
+    zrs = zindrs - zinds
+    mzrs = 1. - zrs
+    vrs = vindrs - vinds
+    mvrs = 1. - vrs
+    outxs = (mzrs * mvrs * xs[zinds    , vinds] +
+             mzrs * vrs  * xs[zinds    , vinds + 1] +
+             zrs  * mvrs * xs[zinds + 1, vinds] +
+             zrs  * vrs  * xs[zinds + 1, vinds + 1])
+    outys = (mzrs * mvrs * ys[zinds    , vinds] +
+             mzrs * vrs  * ys[zinds    , vinds + 1] +
+             zrs  * mvrs * ys[zinds + 1, vinds] +
+             zrs  * vrs  * ys[zinds + 1, vinds + 1])
+    return outxs, outys
 
 def paint_actions_angles(atzs, atvs, sunpars, dynpars, blob=None):
+    """
+    - This function should work with ACTIONS not zmaxs
+    - This function needs to deal with the four quadrants, either in a
+      loop or with cleveness.
+    - See `linearly_interpolate()` for edge issues.
+    """
     if blob is None:
-        print("paint_actions_angles: integrating orbits")
-        zs, vs, phis, vmaxs = make_actions_angles(dynpars)
-        print("paint_actions_angles: making KDTree")
-        tree = KDTree(np.vstack([(zs / 1500.).T, (vs / 75.).T]).T)
-        blob = (phis, vmaxs, tree)
+        print("paint_actions_angles: making action-angle grid")
+        dz, nz = 30., 25
+        dv, nv = 3., 25
+        zs, vs, zmaxs, vmaxs, phis = \
+            make_action_angle_grid(np.arange(nz + 1) * dz,
+                                   np.arange(nv + 1) * dv, dynpars)
+        us = np.sqrt(zmaxs) * np.cos(phis)
+        vs = np.sqrt(zmaxs) * np.sin(phis)
+        blob = (dz, nz, dv, nv, xs, ys)
     else:
-        phis, vmaxs, tree = blob
-    print("paint_actions_angles: getting nearest neighbors")
+        dz, nz, dv, nv, xs, ys = blob
+    print("paint_actions_angles: interpolating")
     inzs = atzs + sunpars[0] / pc
     invs = atvs + sunpars[1] / (km / s)
-    inds = tree.query(np.vstack([(inzs / 1500.).T, (invs / 75.).T]).T, return_distance=False)
+    outxs, outys = linearly_interpolate(inzs, invs, blob)
     print("paint_actions_angles: done")
-    return vmaxs[inds].flatten(), phis[inds].flatten(), blob
+    return outxs ** 2 + outys ** 2, np.atan2(outys, outxs), blob
 
 def pure_sech(z, pars):
     surfacedensity, scaleheight = pars
@@ -170,68 +201,35 @@ def dummy(z, pars):
 if __name__ == "__main__":
     import pylab as plt
     plt.rc('text', usetex=True)
-    pars = np.array([100. * sigunits, 400 * pc])
     kmpspMyr = 1 * ((km / s) / (Myr))
 
-    zgrid = np.arange(0., 1500.1, 60.) * (pc)
-    vgrid = np.arange(0., 75.1, 3.) * (km / s)
-    zs = np.outer(zgrid, np.ones_like(vgrid)).flatten()
-    vs = np.outer(np.ones_like(zgrid), vgrid).flatten()
-    zmaxs = np.zeros_like(zs)
-    vmaxs = np.zeros_like(zs)
-    phis = np.zeros_like(zs)
-    for i, (z, v) in enumerate(zip(zs, vs)):
-        zmaxs[i], vmaxs[i], phis[i] = make_actions_angles_one_quadrant(z, v, pars)
-    """
-    zs = np.append(zs, zs)
-    vs = np.append(vs, 0. - vs)
-    zmaxs = np.append(zmaxs, zmaxs)
-    vmaxs = np.append(vmaxs, vmaxs)
-    phis = np.append(phis, np.pi - phis)
-    zs = np.append(zs, 0. - zs)
-    vs = np.append(vs, vs)
-    zmaxs = np.append(zmaxs, zmaxs)
-    vmaxs = np.append(vmaxs, vmaxs)
-    phis = np.append(phis, 2. * np.pi - phis)
-    """
+    pars = np.array([100. * sigunits, 400 * pc])
+    zgrid = np.arange(26) * 30. * (pc)
+    vgrid = np.arange(26) * 3. * (km / s)
+    vs, zs, zmaxs, vmaxs, phis = make_action_angle_grid(zgrid, vgrid, pars)
+
     plt.clf()
-    plt.scatter(vs / (km / s), zs / (pc), c=(zmaxs / (pc)), alpha=0.5)
+    plt.scatter(vs.flatten() / (km / s), zs.flatten() / (pc), c=(zmaxs.flatten() / (pc)), alpha=0.5)
     plt.colorbar()
     plt.savefig("deleteme1.png")
     plt.clf()
-    plt.scatter(vs / (km / s), zs / (pc), c=(vmaxs / (km / s)), alpha=0.5)
+    plt.scatter(vs.flatten() / (km / s), zs.flatten() / (pc), c=(vmaxs.flatten() / (km / s)), alpha=0.5)
     plt.colorbar()
     plt.savefig("deleteme2.png")
     plt.clf()
-    plt.scatter(vs / (km / s), zs / (pc), c=(phis * 180. / np.pi), alpha=0.5)
+    plt.scatter(vs.flatten() / (km / s), zs.flatten() / (pc), c=(phis.flatten() * 180. / np.pi), alpha=0.5)
     plt.colorbar()
     plt.savefig("deleteme3.png")
 
-    uzs = np.unique(np.sort(zs))
-    TINY = 1e-3 * pc
-    for uz in uzs:
-        if uz < TINY:
-            I = zs == uz
-            plt.clf()
-            plt.plot(vs[I] / (km / s), phis[I], "ro", alpha=0.5)
-        if uz > 155.5 * pc:
-            I = zs == uz
-            plt.plot(vs[I] / (km / s), phis[I], "ko", alpha=0.5)
-            plt.savefig("deleteme4.png")
-            break
+    plt.clf()
+    for i in len(vs):
+        plt.plot(vs[i] / (km / s), phis[i], "k-", alpha=0.5)
+    plt.savefig("deleteme4.png")
 
-    uvs = np.unique(np.sort(vs))
-    TINY = 1e-3 * km / s
-    for uv in uvs:
-        if uv < TINY:
-            I = vs == uv
-            plt.clf()
-            plt.plot(zs[I] / (pc), phis[I], "ro", alpha=0.5)
-        if uv > 20. * km / s:
-            I = vs == uv
-            plt.plot(zs[I] / (pc), phis[I], "ko", alpha=0.5)
-            plt.savefig("deleteme5.png")
-            break
+    plt.clf()
+    for i in len(vs.T):
+        plt.plot(vs[:, i] / (km / s), phis[:, i], "k-", alpha=0.5)
+    plt.savefig("deleteme4.png")
 
 if False:
 
