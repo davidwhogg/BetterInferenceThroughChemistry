@@ -154,17 +154,27 @@ if __name__ == "__main__":
     galcen = galcen[inbox]
 
     # make phase space
-    zs = galcen.z.to(u.pc).value
-    vs = galcen.v_z.to(u.km/u.s).value
+    zs = galcen.z.to(u.pc).value * pc # note UNITS craziness
+    vs = galcen.v_z.to(u.km/u.s).value * km / s # note UNITS craziness
 
     # set fiducial parameters
     sunpars0 = np.array([0. * pc, 0. * km / s])
     dynpars0 = np.array([62.5 * sigunits, 400 * pc])
     metalpars0 = np.array([0.0382])
 
-    # plot abundance vs action for some standard potential
+    # plot various things for some standard potential
     if False:
-        vmaxs, phis, blob = paint_actions_angles(zs, vs, sunpars0, dynpars0)
+        zmaxs, phis, blob = paint_actions_angles(zs, vs, sunpars0, dynpars0)
+        plt.clf()
+        plt.scatter(vs / (km / s), zs / (pc), c=(zmaxs / (pc)), s=2)
+        plt.colorbar()
+        plt.savefig("deleteme_galah1.png")
+        plt.clf()
+        plt.scatter(vs / (km / s), zs / (pc), c=(phis * 180. / np.pi), s=2)
+        plt.colorbar()
+        plt.savefig("deleteme_galah3.png")
+
+    if False:
         plt.clf()
         plt.plot(vmaxs + 2. * np.random.uniform(-1, 1, size=len(vmaxs)), galah.mg_fe, "k.", alpha=0.25)
         plotx = np.array([0., 76.])
@@ -172,6 +182,8 @@ if __name__ == "__main__":
         plt.xlabel(r"$v_\mathrm{max}$ (km / s)")
         plt.ylabel(r"[Mg / Fe] (dex)")
         plt.savefig("slope.png")
+
+if True:
 
     # plot some likelihood sequences
     for k, units, name, scale in [(0, pc, "zsun", 40.),
@@ -186,24 +198,24 @@ if __name__ == "__main__":
         if k < 2:
             pars = sunpars
             i = k
-            recompute_tree = False
+            recompute = False
         elif k < 4:
             pars = dynpars
             i = k - 2
-            recompute_tree = True
+            recompute = True
         else:
             pars = metalpars
             i = k - 4
-            recompute_tree = False
-        parsis = pars[i] + np.arange(-1., 1.001, 0.01) * scale * units
+            recompute = False
+        parsis = pars[i] + np.arange(-1., 1.001, 0.1) * scale * units
         llfs = np.zeros_like(parsis)
         blob = None
         for j, parsi in enumerate(parsis):
             pars[i] = parsi
-            if recompute_tree:
+            if recompute:
                 blob = None
-            vmaxs, phis, blob = paint_actions_angles(zs, vs, sunpars, dynpars, blob=blob)
-            llfs[j] = ln_like(metalpars, galah.mg_fe, vmaxs)
+            zmaxs, phis, blob = paint_actions_angles(zs, vs, sunpars, dynpars, blob=blob)
+            llfs[j] = ln_like(metalpars, galah.mg_fe, zmaxs)
         plt.clf()
         plt.plot(parsis / units, llfs, "ko", alpha=0.75)
         plt.ylim(np.max(llfs)-30., np.max(llfs)+3.)

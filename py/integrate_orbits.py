@@ -129,9 +129,6 @@ def make_action_angle_grid(zgrid, vgrid, pars):
     for i in range(len(zgrid)):
         for j in range(len(vgrid)):
             zmaxs[i, j], vmaxs[i, j], phis[i, j] = make_actions_angles_one_quadrant(zs[i, j], vs[i, j], pars)
-    i = 15
-    j = 7
-    print(i, j, zs[i, j] / (pc), vs[i, j] / (km / s), zmaxs[i, j] / (pc), vmaxs[i, j] / (km / s))
     return zs, vs, zmaxs, vmaxs, phis
 
 def linearly_interpolate(inzs, invs, blob):
@@ -154,21 +151,23 @@ def linearly_interpolate(inzs, invs, blob):
     mzrs = 1. - zrs
     vrs = vindrs - vinds
     mvrs = 1. - vrs
-    outxs = (mzrs * mvrs * xs[zinds    , vinds] +
-             mzrs * vrs  * xs[zinds    , vinds + 1] +
-             zrs  * mvrs * xs[zinds + 1, vinds] +
-             zrs  * vrs  * xs[zinds + 1, vinds + 1])
-    outys = (mzrs * mvrs * ys[zinds    , vinds] +
-             mzrs * vrs  * ys[zinds    , vinds + 1] +
-             zrs  * mvrs * ys[zinds + 1, vinds] +
-             zrs  * vrs  * ys[zinds + 1, vinds + 1])
+    outxs = mzrs * mvrs * xs[zinds    , vinds]     + \
+            mzrs * vrs  * xs[zinds    , vinds + 1] + \
+            zrs  * mvrs * xs[zinds + 1, vinds]     + \
+            zrs  * vrs  * xs[zinds + 1, vinds + 1]
+    outys = mzrs * mvrs * ys[zinds    , vinds]     + \
+            mzrs * vrs  * ys[zinds    , vinds + 1] + \
+            zrs  * mvrs * ys[zinds + 1, vinds]     + \
+            zrs  * vrs  * ys[zinds + 1, vinds + 1]
     return outxs, outys
 
 def paint_actions_angles(atzs, atvs, sunpars, dynpars, blob=None):
     """
-    - This function should work with ACTIONS not zmaxs
-    - This function needs to deal with the four quadrants, either in a
-      loop or with cleveness.
+    - There are dangerous units issues here. Need all inputs in SI
+      units.
+    - MAGIC numbers in `dz, nz, dv, nv`.
+    - This function should work with ACTIONS not zmaxs.
+    - Check `np.sign()` insanity!
     - See `linearly_interpolate()` for edge issues.
     """
     if blob is None:
@@ -178,17 +177,19 @@ def paint_actions_angles(atzs, atvs, sunpars, dynpars, blob=None):
         zs, vs, zmaxs, vmaxs, phis = \
             make_action_angle_grid(np.arange(nz + 1) * dz,
                                    np.arange(nv + 1) * dv, dynpars)
-        us = np.sqrt(zmaxs) * np.cos(phis)
-        vs = np.sqrt(zmaxs) * np.sin(phis)
+        xs = np.sqrt(zmaxs) * np.cos(phis)
+        ys = np.sqrt(zmaxs) * np.sin(phis)
         blob = (dz, nz, dv, nv, xs, ys)
     else:
         dz, nz, dv, nv, xs, ys = blob
     print("paint_actions_angles: interpolating")
-    inzs = atzs + sunpars[0] / pc
-    invs = atvs + sunpars[1] / (km / s)
-    outxs, outys = linearly_interpolate(inzs, invs, blob)
+    inzs = atzs + sunpars[0]
+    invs = atvs + sunpars[1]
+    outxs, outys = linearly_interpolate(inzs * np.sign(inzs), invs * np.sign(invs), blob)
+    outphis = np.arctan2(outys * np.sign(inzs), outxs * np.sign(invs))
+    outphis[outphis < 0.] += 2. * np.pi
     print("paint_actions_angles: done")
-    return outxs ** 2 + outys ** 2, np.atan2(outys, outxs), blob
+    return outxs ** 2 + outys ** 2, outphis, blob
 
 def pure_sech(z, pars):
     surfacedensity, scaleheight = pars
