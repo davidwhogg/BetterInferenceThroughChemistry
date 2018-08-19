@@ -35,16 +35,31 @@ yr = 365.25 * 24. * 3600. * s
 Myr = 1.e6 * yr
 sigunits = 1. * M_sun / (pc ** 2)
 
-def ln_like(pars, qs, vmaxs):
+def ln_like(pars, qs, invariants):
     """
-    Note the MAGIC offset.
+    comments:
+    - It is best to call this with something like invariants -
+      mean(invariants),
+
+    bugs:
+    - Quadratic order hard-coded.
     """
     var = pars
-    offset = 30.
-    AT = np.vstack([np.ones_like(qs), vmaxs - offset])
+    AT = np.vstack([np.ones_like(invariants), invariants, invariants ** 2])
     A = AT.T
     x = np.linalg.solve(np.dot(AT, A), np.dot(AT, qs))
     return -0.5 * np.sum((qs - np.dot(A, x)) ** 2 / var + np.log(var))
+
+def pure_sech(z, pars):
+    surfacedensity, scaleheight = pars
+    return -8. * G * surfacedensity * np.arctan(np.tanh(z / scaleheight))
+
+def pure_exponential(z, pars):
+    surfacedensity, scaleheight = pars
+    return -twopiG * surfacedensity * (1. - np.exp(-np.abs(z) / scaleheight)) * np.sign(z)
+
+def dummy(z, pars):
+    return -1.5 * np.sign(z)
 
 def leapfrog_step(z, v, dt, acceleration, pars):
     znew = z + v * dt
@@ -72,8 +87,12 @@ def leapfrog_full_circle(vmax, dt, acceleration, pars):
     return zs[:t+2], vs[:t+2], phis
 
 def leapfrog_back_to_midplane(z, v, timestep, acceleration, pars):
+    """
+    bugs:
+    - repeated code with `leapfrog_forward_to_zmax()`
+    """
     if z == 0:
-        return v, 0.
+        return v, 0., 0., 0.
     maxstep = 32768
     zs = np.zeros(maxstep)
     vs = np.zeros(maxstep)
@@ -90,11 +109,19 @@ def leapfrog_back_to_midplane(z, v, timestep, acceleration, pars):
                 + 0.5 * (acceleration(zs[t+1], pars) -
                          acceleration(zs[t], pars)) * dt * fraction * fraction
             break
-    return vmax, time_at_midplane
+    action1 = 0.5 * np.sum((zs[1:t+1] + zs[:t]) * np.abs(vs[1:t+1] - vs[:t]))
+    action1 += 0.5 * fraction * (zs[t+1] + zs[t]) * np.abs(vs[t+1] - vs[t])
+    action2 = 0.5 * np.sum(np.abs(zs[1:t+1] - zs[:t]) * (vs[1:t+1] + vs[:t]))
+    action2 += 0.5 * fraction * np.abs(zs[t+1] - zs[t]) * (vs[t+1] + vs[t])
+    return vmax, time_at_midplane, action1, action2
 
 def leapfrog_forward_to_zmax(z, v, timestep, acceleration, pars):
+    """
+    bugs:
+    - repeated code with `leapfrog_back_to_midplane()`
+    """
     if v == 0:
-        return z, 0.
+        return z, 0., 0., 0.
     maxstep = 32768
     zs = np.zeros(maxstep)
     vs = np.zeros(maxstep)
@@ -108,28 +135,38 @@ def leapfrog_forward_to_zmax(z, v, timestep, acceleration, pars):
             time_at_zmax = dt * (t + fraction)
             zmax = zs[t] + vs[t] * fraction * dt + 0.5 * (vs[t+1] - vs[t]) * dt * fraction * fraction
             break
-    return zmax, time_at_zmax
+    action1 = 0.5 * np.sum((zs[1:t+1] + zs[:t]) * np.abs(vs[1:t+1] - vs[:t]))
+    action1 += 0.5 * fraction * (zs[t+1] + zs[t]) * np.abs(vs[t+1] - vs[t])
+    action2 = 0.5 * np.sum(np.abs(zs[1:t+1] - zs[:t]) * (vs[1:t+1] + vs[:t]))
+    action2 += 0.5 * fraction * np.abs(zs[t+1] - zs[t]) * (vs[t+1] + vs[t])
+    return zmax, time_at_zmax, action1, action2
 
-def make_actions_angles_one_quadrant(z, v, pars, timestep = 0.1 * Myr):
+def make_actions_angles_one_quadrant(z, v, pars, timestep = 0.1 * Myr, acceleration = pure_sech):
+    """
+    bugs:
+    - Note horrible (0., 0.) hack
+    """
     assert z >= 0.
     assert v >= 0.
     if z == 0. and v == 0.: # horrible special case
-        return 0., 0., 0.25 * np.pi
-    vmax, time_at_midplane = leapfrog_back_to_midplane(z, v, timestep, pure_sech, pars)
-    zmax, time_at_zmax = leapfrog_forward_to_zmax(z, v, timestep, pure_sech, pars)
+        return 0., 0., 0., 0.25 * np.pi
+    vmax, time_at_midplane, jz1, jz2 = leapfrog_back_to_midplane(z, v, timestep, acceleration, pars)
+    zmax, time_at_zmax, jz3, jz4 = leapfrog_forward_to_zmax(z, v, timestep, acceleration, pars)
     phi = (0. - time_at_midplane) * 0.5 * np.pi / (time_at_zmax - time_at_midplane)
-    return zmax, vmax, phi
+    return zmax, vmax, 2. * (jz1 + jz2 + jz3 + jz4), phi
 
 def make_action_angle_grid(zgrid, vgrid, pars):
     zs = np.outer(zgrid, np.ones_like(vgrid))
     vs = np.outer(np.ones_like(zgrid), vgrid)
     zmaxs = np.zeros_like(zs)
     vmaxs = np.zeros_like(zs)
-    phis = np.zeros_like(zs)
+    phis =  np.zeros_like(zs)
+    Jzs =   np.zeros_like(zs)
     for i in range(len(zgrid)):
         for j in range(len(vgrid)):
-            zmaxs[i, j], vmaxs[i, j], phis[i, j] = make_actions_angles_one_quadrant(zs[i, j], vs[i, j], pars)
-    return zs, vs, zmaxs, vmaxs, phis
+            zmaxs[i, j], vmaxs[i, j], Jzs[i, j], phis[i, j] = \
+                make_actions_angles_one_quadrant(zs[i, j], vs[i, j], pars)
+    return zs, vs, zmaxs, vmaxs, Jzs, phis
 
 def linearly_interpolate(inzs, invs, blob):
     """
@@ -166,19 +203,18 @@ def paint_actions_angles(atzs, atvs, sunpars, dynpars, blob=None):
     - There are dangerous units issues here. Need all inputs in SI
       units.
     - MAGIC numbers in `dz, nz, dv, nv`.
-    - This function should work with ACTIONS not zmaxs.
     - Check `np.sign()` insanity!
     - See `linearly_interpolate()` for edge issues.
     """
     if blob is None:
         print("paint_actions_angles: making action-angle grid")
-        dz, nz = 60. * (pc), 25
-        dv, nv = 3. * (km / s), 25
-        zs, vs, zmaxs, vmaxs, phis = \
+        dz, nz = 100. * (pc), 20
+        dv, nv = 5. * (km / s), 15
+        zs, vs, zmaxs, vmaxs, Jzs, phis = \
             make_action_angle_grid(np.arange(nz + 1) * dz,
                                    np.arange(nv + 1) * dv, dynpars)
-        xs = np.sqrt(zmaxs) * np.cos(phis)
-        ys = np.sqrt(zmaxs) * np.sin(phis)
+        xs = np.sqrt(Jzs) * np.cos(phis)
+        ys = np.sqrt(Jzs) * np.sin(phis)
         blob = (dz, nz, dv, nv, xs, ys)
     else:
         dz, nz, dv, nv, xs, ys = blob
@@ -191,27 +227,20 @@ def paint_actions_angles(atzs, atvs, sunpars, dynpars, blob=None):
     print("paint_actions_angles: done")
     return outxs ** 2 + outys ** 2, outphis, blob
 
-def pure_sech(z, pars):
-    surfacedensity, scaleheight = pars
-    return -8. * G * surfacedensity * np.arctan(np.tanh(z / scaleheight))
-
-def pure_exponential(z, pars):
-    surfacedensity, scaleheight = pars
-    return -twopiG * surfacedensity * (1. - np.exp(-np.abs(z) / scaleheight)) * np.sign(z)
-
-def dummy(z, pars):
-    return -1.5 * np.sign(z)
-
 if __name__ == "__main__":
     import pylab as plt
     plt.rc('text', usetex=True)
     kmpspMyr = 1 * ((km / s) / (Myr))
 
-    pars = np.array([100. * sigunits, 400 * pc])
+    pars = np.array([70. * sigunits, 350 * pc])
     zgrid = np.arange(26) * 30. * (pc)
     vgrid = np.arange(26) * 3. * (km / s)
-    zs, vs, zmaxs, vmaxs, phis = make_action_angle_grid(zgrid, vgrid, pars)
+    zs, vs, zmaxs, vmaxs, Jzs, phis = make_action_angle_grid(zgrid, vgrid, pars)
 
+    plt.clf()
+    plt.scatter(vs.flatten() / (km / s), zs.flatten() / (pc), c=(Jzs.flatten() / (pc * km / s)), alpha=0.5)
+    plt.colorbar()
+    plt.savefig("deleteme0.png")
     plt.clf()
     plt.scatter(vs.flatten() / (km / s), zs.flatten() / (pc), c=(zmaxs.flatten() / (pc)), alpha=0.5)
     plt.colorbar()
@@ -252,7 +281,7 @@ if False:
     Nstars = 1000
     zs = zlim * (np.random.uniform(size=Nstars) * 2. - 1)
     vs = vlim * (np.random.uniform(size=Nstars) * 2. - 1)
-    vmaxs, phis, blob = paint_actions_angles(zs, vs, pars)
+    Jzs, phis, blob = paint_actions_angles(zs, vs, pars)
 
     fig, ax = plt.subplots(1, 1, figsize=(5, 5), sharex=True, sharey=True)
     plt.scatter(vs, zs, c=phis, s=10.)
