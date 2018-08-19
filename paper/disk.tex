@@ -59,14 +59,16 @@ Chemical-tangents method:\\
 Identifying orbits in phase space through element-abundance invariances}}
 
 \author[0000-0003-2866-9403]{David W. Hogg}
-\affil{Center for Computational Astrophysics, Flatiron Institute, 162 Fifth Ave, New York, NY 10010, USA}
 \affil{Center for Cosmology and Particle Physics, Department of Physics, New York University, 726 Broadway, New York, NY 10003, USA}
 \affil{Center for Data Science, New York University, 60 Fifth Ave, New York, NY 10011, USA}
 \affil{Max-Planck-Institut f\"ur Astronomie, K\"onigstuhl 17, D-69117 Heidelberg}
+\affil{Flatiron Institute, 162 Fifth Ave, New York, NY 10010, USA}
 
 \author[0000-0003-0872-7098]{Adrian~M.~Price-Whelan}
-\affiliation{Department of Astrophysical Sciences,
-             Princeton University, Princeton, NJ 08544, USA}
+\affil{Department of Astrophysical Sciences, Princeton University, Princeton, NJ 08544, USA}
+
+\author[0000-0003-4996-9069]{Hans-Walter Rix}
+\affil{Max-Planck-Institut f\"ur Astronomie, K\"onigstuhl 17, D-69117 Heidelberg}
 
 \author{Others}
 
@@ -220,8 +222,56 @@ However,
 we have discovered, in effect, a \emph{combinatorically large set of constraints on the
 dynamical actions and conjugate angles}.
 
+HERE WE JUST CONSIDER VERTICAL DYNAMICS. This restricts the problem usefully and is good
+for pedagogical purposes.
+
 HOGG Aside: Controversy over the massive/dense disk. How we might resolve it.
-But still making the phase-mixed assumption!
+But still making the phase-mixed assumption! Note the Antoja results and the \gaia\ results
+that suggest that the disk is not well mixed, even locally.
+
+\section{Data}
+
+For this project we make use of \galah\ Survey (CITE) data.
+\galah\ has released (CITE BUDER) XXX measurements of element abundances for YYY stars.
+These stars have good representation near the Sun, so the sample is ideally suited for studying
+the Solar Neighborhood and the nearby disk.
+
+In detail, we subsample the \galah\ data to HOGG WHAT REGION of phase space.
+This leaves HOGG HOW MANY stars.
+The subsample we use is shown in \figurename~\ref{fig:data}.
+\begin{figure}
+\caption{The data used in this \documentname. Each panel shows the stellar points in the
+plane of vertical position $z$ and vertical velocity $v_z$, colored by a different element
+abundance ratio. These are phase-space plots, but colored by the abundance ratios.
+It is clear in these plots that the abundance ratio level surfaces will be
+constraining on the orbits.\label{fig:data}}
+\end{figure}
+
+There are many different abundance ratios we might use to constrain the vertical of the disk.
+structure.
+We choose HOGG WHAT RATIOS because they are well measured in \galah\ and they show strong
+vertical gradients.
+These abundance ratios are shown in \figurename~\ref{fig:data}.
+This choice is relatively arbitrary; there is no sense in which this project is making use
+of all the element-abundance information latent in the \galah\ data.
+
+In addition to the \galah\ abundance data, we use radial-velocity measurements from \galah,
+and position and proper-motion measurements from \gaia\ (CITE) \acronym{DR2} (CITE).
+In detail, we matched \galah\ to \gaia\ HOGG HOW?
+
+We assemble the \galah\ and \gaia\ information for each star into a Galactic position and
+velocity assuming HOGG WHAT THINGS about the Solar phase-space position in the Galaxy.
+
+\section{Methodological generalities}
+
+In general the idea underlying this method is to figure out what mass-density distribution
+in the Galaxy leads to orbits in phase space such that those orbits are level
+hyper-surfaces in phase space of statistics of the chemical-abundance distribution.
+Alternatively, the idea is to figure out what mass-density distribution leads to orbits
+on which statistics of the chemical-abundance distribution do not vary with conjugate
+angle.
+And of course this will all be done probabilistically, inasmuch as that is easy.
+So the idea is to perform probabilistic inference of the mass-density distribution.
 
 \section{Assumptions}
 
@@ -231,6 +281,10 @@ That is, we are going to make hard (and sometimes controversial) assumptions,
 and although the assumptions will be questionable, the claim will be that the
 method is correct under the assumptions.
 \begin{description}
+\item[local disk] HOGG: Dynamics dominated by the disk,
+and the disk has no transverse spatial gradients. In detail, the sech law and purely
+vertical dynamics.
+
 \item[well mixed] HOGG: All angles equally likely. There is probably also a regular-orbits
 assumption here, but it won't enter in this \documentname\ because we are only doing
 one-dimensional dynamics.
@@ -247,36 +301,41 @@ condition on them!
 space get the same abundance measurements. Questionable in certain kinds of samples.
 HOGG: Oddly I don't think we need to assume that the chemical measurements have good
 (or any) noise estimates. They could be terrible, I think.
+
+\item[broad briors] HOGG: Ignoring essentially all prior information about the disk.
 \end{description}
 
 \section{Method}
-
-In general the idea underlying this method is to figure out what mass-density distribution
-in the Galaxy leads to orbits in phase space such that those orbits are level
-hyper-surfaces in phase space of statistics of the chemical-abundance distribution.
-Alternatively, the idea is to figure out what mass-density distribution leads to orbits
-on which statistics of the chemical-abundance distribution do not vary with conjugate
-angle.
-And of course this will all be done probabilistically, inasmuch as that is easy.
-So the idea is to perform probabilistic inference of the mass-density distribution.
 
 HOGG: Dropping from 3-d to 1-d. In this case, let's start with 1-d. What about that is simpler?
 
 HOGG: maximize conjugate-angle diversity at fixed element abundances?
 Or minimize abundance-ratio diversity at fixed orbit? The latter! Why?
 
-\section{Data and results}
+HOGG: LF description.
 
+HOGG: Priors and posterior.
+
+\section{Experiments and results}
+
+HOGG: MCMC description.
+
+HOGG: MCMC results.
 \begin{figure}
-\caption{The data used in this \documentname. Each panel shows the stellar points in the
-plane of vertical position $z$ and vertical velocity $v_z$, colored by a different element
-abundance ratio. These are phase-space plots, but colored by the abundance ratios.
-It is clear in these plots that the abundance ratio level surfaces will be
-constraining on the orbits.\label{fig:data}}
+\caption{Posterior samples for the model parameters.\label{fig:samples}}
 \end{figure}
 
+HOGG: best-fit answers, including visualizations of orbits.
 \begin{figure}
-\caption{Abundances versus conjugate angles, for different mass distributions.
+\caption{Posterior orbit structure. Same as \figurename~\ref{fig:data} but now with
+posterior-sensible orbits shown to indicate that the orbits do come close to describing
+level surfaces in the phase space.\label{fig:orbits}}
+\end{figure}
+
+HOGG: Residuals can be visualized. Residuals vs conjugate angles for various potential modifications.
+
+\begin{figure}
+n\caption{Abundances versus conjugate angles, for different mass distributions.
 Each panel shows an abundance ratio HOGG vs conjugate angle $\phi_z$, for three different
 choices of the mean mass density at the disk midplane, for fixed scale height and midplane
 location. Note that when the mass distribution gets very wrong, the stars show strong
@@ -293,24 +352,13 @@ varying the scale height leads to a higher order variation with angle.\label{fig
 that varying the midplane location leads to a lower order variation with angle.\label{fig:midplane}}
 \end{figure}
 
-\begin{figure}
-\caption{Posterior samples for the model parameters.\label{fig:samples}}
-\end{figure}
-
-\begin{figure}
-\caption{Posterior orbit structure. Same as \figurename~\ref{fig:data} but now with
-posterior-sensible orbits shown to indicate that the orbits do come close to describing
-level surfaces in the phase space.}
-\end{figure}
-
 \section{Discussion}
 
 \acknowledgements
 It is a pleasure to thank
-  Jo Bovy (Toronto), 
-  Melissa Ness (Columbia),
+  Jo Bovy (Toronto)
   and
-  Hans-Walter Rix (\acronym{MPIA})
+  Melissa Ness (Columbia)
 for valuable discussions that made this project possible.
 
 HOGG: \galah\ ack??
