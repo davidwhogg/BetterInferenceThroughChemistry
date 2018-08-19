@@ -129,6 +129,9 @@ def make_action_angle_grid(zgrid, vgrid, pars):
     for i in range(len(zgrid)):
         for j in range(len(vgrid)):
             zmaxs[i, j], vmaxs[i, j], phis[i, j] = make_actions_angles_one_quadrant(zs[i, j], vs[i, j], pars)
+    i = 15
+    j = 7
+    print(i, j, zs[i, j] / (pc), vs[i, j] / (km / s), zmaxs[i, j] / (pc), vmaxs[i, j] / (km / s))
     return zs, vs, zmaxs, vmaxs, phis
 
 def linearly_interpolate(inzs, invs, blob):
@@ -170,8 +173,8 @@ def paint_actions_angles(atzs, atvs, sunpars, dynpars, blob=None):
     """
     if blob is None:
         print("paint_actions_angles: making action-angle grid")
-        dz, nz = 30., 25
-        dv, nv = 3., 25
+        dz, nz = 60. * (pc), 25
+        dv, nv = 3. * (km / s), 25
         zs, vs, zmaxs, vmaxs, phis = \
             make_action_angle_grid(np.arange(nz + 1) * dz,
                                    np.arange(nv + 1) * dv, dynpars)
@@ -206,7 +209,7 @@ if __name__ == "__main__":
     pars = np.array([100. * sigunits, 400 * pc])
     zgrid = np.arange(26) * 30. * (pc)
     vgrid = np.arange(26) * 3. * (km / s)
-    vs, zs, zmaxs, vmaxs, phis = make_action_angle_grid(zgrid, vgrid, pars)
+    zs, vs, zmaxs, vmaxs, phis = make_action_angle_grid(zgrid, vgrid, pars)
 
     plt.clf()
     plt.scatter(vs.flatten() / (km / s), zs.flatten() / (pc), c=(zmaxs.flatten() / (pc)), alpha=0.5)
@@ -222,14 +225,14 @@ if __name__ == "__main__":
     plt.savefig("deleteme3.png")
 
     plt.clf()
-    for i in len(vs):
-        plt.plot(vs[i] / (km / s), phis[i], "k-", alpha=0.5)
+    for i in range(len(vs)):
+        plt.plot(vs[i] / (pc), phis[i], "k-", alpha=0.5)
     plt.savefig("deleteme4.png")
 
     plt.clf()
-    for i in len(vs.T):
-        plt.plot(vs[:, i] / (km / s), phis[:, i], "k-", alpha=0.5)
-    plt.savefig("deleteme4.png")
+    for i in range(len(vs.T)):
+        plt.plot(zs[:, i] / (km / s), phis[:, i], "k-", alpha=0.5)
+    plt.savefig("deleteme5.png")
 
 if False:
 
