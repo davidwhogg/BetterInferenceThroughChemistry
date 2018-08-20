@@ -4,13 +4,11 @@
 % To-dos
 % ------
 % - draft introduction
+% - draft generalities section
 % - draft assumptions list / section
-% - draft method
-% -- LF: a few mean(actions) parameters and then the dynamical parameters
+% - draft method & lf
 % - draft data & results
 % - draft discussion
-% -- Bovy point that selection can enter at higher order bc luminosity
-% -- look at element wrongness with Teff, logg; and say words about it; this could KILL the method.
 
 % Style notes
 % - 
@@ -275,9 +273,11 @@ In detail, we subsample the \galah\ data to HOGG WHAT REGION of phase space.
 This leaves HOGG HOW MANY stars.
 The subsample we use is shown in \figurename~\ref{fig:data}.
 \begin{figure}
-\caption{The data used in this \documentname. Each panel shows the stellar points in the
-plane of vertical position $z$ and vertical velocity $v_z$, colored by a different element
-abundance ratio. These are phase-space plots, but colored by the abundance ratios.
+\caption{The data used in this \documentname.
+Each panel shows the stellar points in the plane
+of vertical position $z$ and vertical velocity $v_z$,
+colored by a different element abundance ratio.
+These are phase-space plots, but colored by the abundance ratios.
 It is clear in these plots that the abundance ratio level surfaces will be
 constraining on the orbits.\label{fig:data}}
 \end{figure}
@@ -289,6 +289,19 @@ vertical gradients.
 These abundance ratios are shown in \figurename~\ref{fig:data}.
 This choice is relatively arbitrary; there is no sense in which this project is making use
 of all the element-abundance information latent in the \galah\ data.
+
+As we will describe below, the method depends critically on the element abundance
+measurements being consistent across stellar types.
+That is, it is critical that the element abundance measurments in luminous
+stars---which are observed to greater distances in general---are similar in their
+biases to the measurements in less luminous stars.
+That is, the abundance measurements don't necessarily have to be accurate, but
+they do have to be consistent.
+In \figurename~\ref{fig:testing}, HOGG SOMETHING IS SHOWN.
+\begin{figure}
+\caption{HOGG SOME KIND OF TEST that the element abundance measurements
+are consistent for stars of different surface gravities.\label{fig:testing}}
+\end{figure}
 
 In addition to the \galah\ abundance data, we use radial-velocity measurements from \galah,
 and position and proper-motion measurements from \gaia\ (CITE) \acronym{DR2} (CITE).
@@ -321,7 +334,7 @@ on abundances. That might be very slightly wrong.
 in 6-d are accurate and precise. So precise we don't have to generate them, we can
 condition on them!
 
-\item[chemical measurements] HOGG: Assumption that stars in different parts of phase
+\item[abundance measurements] HOGG: Assumption that stars in different parts of phase
 space get the same abundance measurements. Questionable in certain kinds of samples.
 HOGG: Oddly I don't think we need to assume that the chemical measurements have good
 (or any) noise estimates. They could be terrible, I think.
@@ -394,6 +407,10 @@ gradients assumption: If we choose different invariants to use, we get slightly 
 answers, because (HOGG presumes) that the functional form for the abundance means fits
 better or worse. So these results aren't definitive; we should probably use a more flexible
 model for the abundance gradients, like a GP or etc.
+
+HOGG: Another is the good abundances and selection assumptions: Do the abundances affect
+the selection, and are the abundance measurements a function of stellar type? Either way,
+we will inherit biases.
 
 HOGG: What is the limit of this method as we go forward: Many abundance ratios? Many other
 statistics of the abundance distribution? How do things change if the abundances track
