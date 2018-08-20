@@ -14,6 +14,8 @@ bugs / to-dos:
 - Fix the LF to marginalize out offset and slope. Should be
   possible. Right now it just sets it to ML.
 - Make it possible to use multiple abundances simultaneously.
+- Make it easy / possible to plot residuals away from the best-fit
+  (or any chosen) model.
 """
 
 import numpy as np

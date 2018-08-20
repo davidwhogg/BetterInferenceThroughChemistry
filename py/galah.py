@@ -169,9 +169,9 @@ if __name__ == "__main__":
     if True:
         Jzs, phis, blob = paint_actions_angles(zs, vs, sunpars0, dynpars0)
         plt.clf()
-        plt.scatter(vs / (km / s), zs / (pc), c=(Jzs / (pc * km / s)), s=2)
+        plt.scatter(vs / (km / s), zs / (pc), c=np.log(Jzs / (pc * km / s)), s=2)
         plt.colorbar()
-        hogg_savefig("deleteme_galah1.png")
+        hogg_savefig("deleteme_galah0.png")
         plt.clf()
         plt.scatter(vs / (km / s), zs / (pc), c=(phis * 180. / np.pi), s=2)
         plt.colorbar()
@@ -218,7 +218,9 @@ if True:
             if recompute:
                 blob = None
             Jzs, phis, blob = paint_actions_angles(zs, vs, sunpars, dynpars, blob=blob)
-            llfs[j] = ln_like(metalpars, metal, Jzs - np.mean(Jzs))
+            invariants = Jzs
+            invariants -= np.mean(invariants)
+            llfs[j] = ln_like(metalpars, metal, invariants)
         plt.clf()
         plt.plot(parsis / units, llfs, "ko", alpha=0.75)
         plt.plot(parsis / units, llfs, "k-", alpha=0.75)
