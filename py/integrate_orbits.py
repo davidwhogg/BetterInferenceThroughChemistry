@@ -32,17 +32,14 @@ yr = 365.25 * 24. * 3600. * s
 Myr = 1.e6 * yr
 sigunits = 1. * M_sun / (pc ** 2)
 
-def ln_like(pars, qs, invariants):
+def ln_like(pars, qs, invariants, order=3):
     """
     comments:
     - It is best to call this with something like invariants -
       mean(invariants),
-
-    bugs:
-    - Quadratic order hard-coded.
     """
     var = pars
-    AT = np.vstack([np.ones_like(invariants), invariants, invariants ** 2])
+    AT = np.vstack([invariants ** k for k in range(order+1)])
     A = AT.T
     x = np.linalg.solve(np.dot(AT, A), np.dot(AT, qs))
     return -0.5 * np.sum((qs - np.dot(A, x)) ** 2 / var + np.log(var))

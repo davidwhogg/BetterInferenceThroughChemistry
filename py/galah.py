@@ -160,10 +160,11 @@ if __name__ == "__main__":
     vs = galcen.v_z.to(u.km/u.s).value * km / s # note UNITS craziness
 
     # set fiducial parameters
-    sunpars0 = np.array([-15. * pc, 1. * km / s])
-    dynpars0 = np.array([65. * sigunits, 390 * pc])
-    metalpars0 = np.array([0.0379])
-    metal, metalname = galah.mg_fe, "[Mg / Fe]"
+    metal, metalname, metalvar = galah.fe_h, "[Fe / H]", 0.07
+    # metal, metalname, metalvar = galah.mg_fe, "[Mg / Fe]", 0.0378
+    sunpars0 = np.array([-12. * pc, 1. * km / s])
+    dynpars0 = np.array([64. * sigunits, 420 * pc])
+    metalpars0 = np.array([metalvar,])
 
     # plot various things for some standard potential
     if True:
@@ -189,12 +190,13 @@ if __name__ == "__main__":
 if True:
 
     # plot some likelihood sequences
-    for k, units, name, scale in [(0, pc, "zsun", 20.),
-                                  (1, km / s, "vsun", 1.5),
-                                  (2, sigunits, "sigma", 8.),
-                                  (3, pc, "scaleheight", 200.),
-                                  (4, 1., "var", 0.001),
-                                  ]:
+    for k, units, name, scale in [
+        (4, 1., "var", 0.005),
+        (0, pc, "zsun", 20.),
+        (1, km / s, "vsun", 1.5),
+        (2, sigunits, "sigma", 8.),
+        (3, pc, "scaleheight", 200.),
+        ]:
         sunpars = 1. * sunpars0
         dynpars = 1. * dynpars0
         metalpars = 1. * metalpars0
