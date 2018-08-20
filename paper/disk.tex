@@ -16,10 +16,8 @@
 % - 
 
 \documentclass[modern]{aastex62}
-\usepackage{graphicx}
-\usepackage{xcolor}
-\usepackage[sort&compress]{natbib}
-\usepackage[hang,flushmargin]{footmisc}
+% \usepackage{graphicx, xcolor}
+% \usepackage[sort&compress]{natbib}
 
 % units macros
 \newcommand{\unit}[1]{\mathrm{#1}}
@@ -39,10 +37,11 @@
 % text macros
 \newcommand{\documentname}{\textsl{Article}}
 \newcommand{\sectionname}{Section}
-\newcommand{\todo}[1]{\textcolor{red}{#1}}  % gotta have \usepackage{xcolor} in main doc or this won't work
+\newcommand{\code}[1]{\texttt{\detokenize{#1}}}
 \newcommand{\acronym}[1]{{\small{#1}}}
 \newcommand{\project}[1]{\textsl{#1}}
 \newcommand{\foreign}[1]{\textsl{#1}}
+\newcommand{\etal}{\foreign{et al.}}
 \newcommand{\galah}{\project{\acronym{GALAH}}}
 \newcommand{\gaia}{\project{Gaia}}
 
@@ -156,13 +155,15 @@ chemical tagging (HOGG CITE), in which the (nearly) invariant surface
 abundances observable in a stellar atmosphere are used as tags that identify
 pairs or groups of stars that were born in the same molecular cloud at the same time,
 even if that time was far in the past.
-Because the chemical tagging approach capitalizes on element-abundance invariants
+Because the chemical-tagging approach capitalizes on element-abundance invariants
 rather than dynamical invariants, it could potentially permit dynamical inferences
 about the Milky Way that do not rely on the phase-mixed assumption underlying
 most old-school methods.
 Chemical tagging has not yet successfully revealed the origins of
-the Milky Way, but element-abundance tags are starting to be used to identify stars that have
-migrated far from their birth locations (CITE).
+the Milky Way, but element-abundance tags are starting to be specific enough to
+identify some kinds of coeval stars (CITE HOGG).
+It is also starting to be used to identify stars that have
+migrated far from their birth locations (CITE NEIGE).
 In its most na\"ive or strongest form, chemical tagging works when high-dimensional
 element-abundance measurements create such a specific fingerprint for a star that it
 can only have one (or a few) possible birthplace events in the 3+1-dimensional past.
@@ -193,7 +194,7 @@ That's a remarkably informative constraint on the configuration of the Milky Way
 the space of positions (3), velocities (3), and detailed abundances (10 to 30, depending
 on survey).
 
-Let's get more specific.
+HOGG: SHOULD THIS MOVE TO GENERALITIES? Let's get more specific.
 Consider a collection of stars (localized, say, in phase space) for which we have
 measured $D$ element abundances.
 This collection of stars is drawn from some density or distribution in
@@ -211,6 +212,7 @@ of the directions of increase (or decrease) of the dynamical actions.
 The trajectories of stars in the phase space (the dynamical tori) must lie along or
 describe level surfaces in the element-abundance distribution!
 
+HOGG: MOVE TO GENERALITIES? PROBABLY NOT ENTIRELY.
 One of the crazy things about all this is that any description of a general distribution in $D$-space
 requires a \emph{lot of parameters}.
 Even a trivial distribution---the Normal distribution---requires $0.5\,D\,(D+3)$ parameters for its
@@ -224,7 +226,8 @@ we have discovered, in effect, a \emph{combinatorically large set of constraints
 dynamical actions and conjugate angles}.
 
 HERE WE JUST CONSIDER VERTICAL DYNAMICS. This restricts the problem usefully and is good
-for pedagogical purposes.
+for pedagogical purposes. But obviously it is not unlocking the full promise of this
+family of methods.
 
 HOGG Aside: Controversy over the massive/dense disk. How we might resolve it.
 But still making the phase-mixed assumption! Note the Antoja results and the \gaia\ results
@@ -355,6 +358,21 @@ that varying the midplane location leads to a lower order variation with angle.\
 
 \section{Discussion}
 
+HOGG: What did we find? How do our conclusions differ from those before us?
+
+HOGG: In particular, what can we say about the dark disk etc?
+
+HOGG: How is what we did better than what came before or happens by other methods?
+
+HOGG: What are the limitations of what we did; what did we sacrifice for our benefits?
+
+HOGG: Return to the assumptions; do any need more discussion.
+
+HOGG: What is the limit of this method as we go forward: Many abundance ratios? Many other
+statistics of the abundance distribution? How do things change if the abundances track
+each other exactly? Is that a problem? Note that we scale much better than chemical tagging
+here.
+
 \acknowledgements
 It is a pleasure to thank
   Jo Bovy (Toronto)
@@ -362,12 +380,39 @@ It is a pleasure to thank
   Melissa Ness (Columbia)
 for valuable discussions that made this project possible.
 
-HOGG: \galah\ ack??
+HOGG: Is there a \galah\ ack??
 
-HOGG: \gaia\ ack.
+This work has made use of data from the European Space Agency (\acronym{ESA}) mission
+\gaia\ (\url{https://www.cosmos.esa.int/gaia}), processed by the \gaia\ Data
+Processing and Analysis Consortium (\acronym{DPAC},
+\url{https://www.cosmos.esa.int/web/gaia/dpac/consortium}). Funding for the
+\acronym{DPAC}
+has been provided by national institutions, in particular the institutions
+participating in the \gaia\ Multilateral Agreement.
 
-\software{the usual}
+\facilities{
+\galah,
+\gaia
+}
 
-\facilities{the usual}
+\software{
+\code{Astropy} \citep{astropy, astropy2},
+\code{IPython} \citep{ipython},
+\code{matplotlib} \citep{matplotlib},
+\code{numpy} \citep{numpy},
+\code{scipy} \citep{scipy}
+}
+
+\begin{thebibliography}{}
+\bibitem[Astropy Collaboration \etal(2013)]{astropy} Astropy Collaboration, Robitaille, T.~P., Tollerud, E.~J., \etal\ 2013, \aap, 558, A33 
+\bibitem[Astropy Collaboration \etal(2018)]{astropy2} The Astropy Collaboration, Price-Whelan, A.~M., Sip{\H o}cz, B.~M., \etal\ 2018, arXiv:1801.02634 
+\bibitem[Gaia Collaboration \etal(2016)]{gaia} Gaia Collaboration, Prusti, T., de Bruijne, J.~H.~J., \etal\ 2016, \aap, 595, A1 
+\bibitem[Gaia Collaboration \etal(2018)]{gaiadr2} Gaia Collaboration, Brown, A.~G.~A., Vallenari, A., \etal\ 2018, arXiv:1804.09365 
+\bibitem[Hunter(2007)]{matplotlib} Hunter, J.~D.\ 2007, CISE, 9(3), 90
+\bibitem[Jones \etal(2001)]{scipy} Jones, E., Oliphant, E., Peterson, P. \etal\ 2001, \url{http://www.scipy.org/}
+\bibitem[Lindegren \etal(2018)]{lindegren} Lindegren, L., Hernandez, J., Bombrun, A., \etal\ 2018, arXiv:1804.09366 
+\bibitem[Oliphant(2006)]{numpy} Oliphant, T.~E.\ 2006, \emph{A guide to NumPy}, Trelgol Publishing
+\bibitem[P\'erez \& Granger(2007)]{ipython} P\'erez, F. \& Granger, B.~E.\ 2007, CISE, 9(3), 29
+\end{thebibliography}
 
 \end{document}

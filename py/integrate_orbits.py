@@ -11,14 +11,9 @@ notes:
 
 bugs / to-dos:
 --------------
-- Should be calculating actions properly, not zmax and vmax. The
-  actions are more stable to calculate anyway! And have better
-  geometric properties!
-- I have to replace the nearest-neighbors with a home-built 2-d
-  interpolation. That might require making the grid not in vmax, phi
-  but in z, vz instead. That's some work but not a crazy amount. It's
-  half-done now. The interpolation should take the look-up table as
-  an input, because we don't always need to recompute it.
+- Fix the LF to marginalize out offset and slope. Should be
+  possible. Right now it just sets it to ML.
+- Make it possible to use multiple abundances simultaneously.
 """
 
 import numpy as np

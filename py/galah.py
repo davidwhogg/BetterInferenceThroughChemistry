@@ -6,8 +6,6 @@ bugs:
 -----
 - I don't know what parameters Pyia is using to go to Galactic
   6-space.
-- Fix the LF to marginalize out offset and slope. Should be
-  possible. Right now it just sets it to ML.
 """
 
 from astropy.table import Table
