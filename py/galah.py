@@ -129,6 +129,46 @@ def plot_uJzs(galah, galcen, parindex, offset):
             sunpars[0] / (pc), sunpars[1] / (km / s), dynpars[0] / (sigunits), dynpars[1] / (pc)))
     return fig, ax
 
+def plot_lf_slices(sunpars0, dynpars0, metalname, metallabel):
+
+    # plot some likelihood sequences
+    for k, units, name, scale in [
+        (0, pc, "zsun", 80.),
+        (1, km / s, "vsun", 4.),
+        (2, sigunits, "sigma", 15.),
+        (3, pc, "scaleheight", 300.),
+        ]:
+        sunpars = 1. * sunpars0
+        dynpars = 1. * dynpars0
+        if k < 2:
+            pars = sunpars
+            i = k
+            recompute = False
+        elif k < 4:
+            pars = dynpars
+            i = k - 2
+            recompute = True
+        parsis = pars[i] + np.arange(-1., 1.001, 0.05) * scale * units
+        llfs = np.zeros_like(parsis)
+        blob = None
+        for j, parsi in enumerate(parsis):
+            pars[i] = parsi
+            if recompute:
+                blob = None
+            Jzs, phis, blob = paint_actions_angles(zs, vs, sunpars, dynpars, blob=blob)
+            invariants = Jzs
+            invariants -= np.mean(invariants)
+            llfs[j] = ln_like(getattr(galah, metalname), invariants)
+        plt.clf()
+        plt.plot(parsis / units, llfs, "ko", alpha=0.75)
+        plt.plot(parsis / units, llfs, "k-", alpha=0.75)
+        plt.ylim(np.max(llfs)-10., np.max(llfs)+1.)
+        plt.axhline(np.max(llfs)-2., color="k", alpha=0.25, zorder=-10)
+        plt.xlabel(name)
+        plt.ylabel("log LF")
+        plt.title(metallabel)
+        hogg_savefig("lf_{}_{}_test.png".format(name, metalname))
+
 if __name__ == "__main__":
 
     # read data and cut
@@ -160,10 +200,19 @@ if __name__ == "__main__":
     vs = galcen.v_z.to(u.km/u.s).value * km / s # note UNITS craziness
 
     # set fiducial parameters
-    # metal, metalname, metalvar = galah.fe_h, "[Fe / H]", 0.07
-    metal, metalname, metalvar = galah.mg_fe, "[Mg / Fe]", 0.0378
-    sunpars0 = np.array([-12. * pc, 1. * km / s])
-    dynpars0 = np.array([64. * sigunits, 420 * pc])
+    sunpars0 = np.array([0. * pc, 0. * km / s])
+    dynpars0 = np.array([64. * sigunits, 400. * pc])
+
+    for metalname, metallabel in [
+        ("fe_h", "[Fe / H]"),
+        ("na_fe", "[Na / Fe]"),
+        ("mg_fe", "[Mg / Fe]"),
+        ("al_fe", "[Al / Fe]"),
+        ("ti_fe", "[Ti / Fe]"),
+        ("eu_fe", "[Ee / Fe]"),
+        ]:
+        plot_lf_slices(sunpars0, dynpars0, metalname, metallabel)
+
 
     # plot various things for some standard potential
     if False:
@@ -183,47 +232,8 @@ if __name__ == "__main__":
         plotx = np.array([0., 76.])
         plt.plot(plotx, 0. + 0.004 * plotx, "r-", zorder=10)
         plt.xlabel(r"$v_\mathrm{max}$ (km / s)")
-        plt.ylabel("{} (dex)".format(metalname))
+        plt.ylabel("{} (dex)".format(metallabel))
         hogg_savefig("slope.png")
-
-if True:
-
-    # plot some likelihood sequences
-    for k, units, name, scale in [
-        (0, pc, "zsun", 20.),
-        (1, km / s, "vsun", 1.5),
-        (2, sigunits, "sigma", 8.),
-        (3, pc, "scaleheight", 200.),
-        ]:
-        sunpars = 1. * sunpars0
-        dynpars = 1. * dynpars0
-        if k < 2:
-            pars = sunpars
-            i = k
-            recompute = False
-        elif k < 4:
-            pars = dynpars
-            i = k - 2
-            recompute = True
-        parsis = pars[i] + np.arange(-1., 1.001, 0.1) * scale * units
-        llfs = np.zeros_like(parsis)
-        blob = None
-        for j, parsi in enumerate(parsis):
-            pars[i] = parsi
-            if recompute:
-                blob = None
-            Jzs, phis, blob = paint_actions_angles(zs, vs, sunpars, dynpars, blob=blob)
-            invariants = Jzs
-            invariants -= np.mean(invariants)
-            llfs[j] = ln_like(metal, invariants)
-        plt.clf()
-        plt.plot(parsis / units, llfs, "ko", alpha=0.75)
-        plt.plot(parsis / units, llfs, "k-", alpha=0.75)
-        plt.ylim(np.max(llfs)-10., np.max(llfs)+1.)
-        plt.axhline(np.max(llfs)-2., color="k", alpha=0.25, zorder=-10)
-        plt.xlabel(name)
-        plt.ylabel("log LF")
-        hogg_savefig("lf_{}_test.png".format(name))
 
 if False:
 
