@@ -160,14 +160,13 @@ if __name__ == "__main__":
     vs = galcen.v_z.to(u.km/u.s).value * km / s # note UNITS craziness
 
     # set fiducial parameters
-    metal, metalname, metalvar = galah.fe_h, "[Fe / H]", 0.07
-    # metal, metalname, metalvar = galah.mg_fe, "[Mg / Fe]", 0.0378
+    # metal, metalname, metalvar = galah.fe_h, "[Fe / H]", 0.07
+    metal, metalname, metalvar = galah.mg_fe, "[Mg / Fe]", 0.0378
     sunpars0 = np.array([-12. * pc, 1. * km / s])
     dynpars0 = np.array([64. * sigunits, 420 * pc])
-    metalpars0 = np.array([metalvar,])
 
     # plot various things for some standard potential
-    if True:
+    if False:
         Jzs, phis, blob = paint_actions_angles(zs, vs, sunpars0, dynpars0)
         plt.clf()
         plt.scatter(vs / (km / s), zs / (pc), c=np.log(Jzs / (pc * km / s)), s=2)
@@ -191,7 +190,6 @@ if True:
 
     # plot some likelihood sequences
     for k, units, name, scale in [
-        (4, 1., "var", 0.005),
         (0, pc, "zsun", 20.),
         (1, km / s, "vsun", 1.5),
         (2, sigunits, "sigma", 8.),
@@ -199,7 +197,6 @@ if True:
         ]:
         sunpars = 1. * sunpars0
         dynpars = 1. * dynpars0
-        metalpars = 1. * metalpars0
         if k < 2:
             pars = sunpars
             i = k
@@ -208,10 +205,6 @@ if True:
             pars = dynpars
             i = k - 2
             recompute = True
-        else:
-            pars = metalpars
-            i = k - 4
-            recompute = False
         parsis = pars[i] + np.arange(-1., 1.001, 0.1) * scale * units
         llfs = np.zeros_like(parsis)
         blob = None
@@ -222,7 +215,7 @@ if True:
             Jzs, phis, blob = paint_actions_angles(zs, vs, sunpars, dynpars, blob=blob)
             invariants = Jzs
             invariants -= np.mean(invariants)
-            llfs[j] = ln_like(metalpars, metal, invariants)
+            llfs[j] = ln_like(metal, invariants)
         plt.clf()
         plt.plot(parsis / units, llfs, "ko", alpha=0.75)
         plt.plot(parsis / units, llfs, "k-", alpha=0.75)

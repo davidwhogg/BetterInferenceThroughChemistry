@@ -19,7 +19,7 @@ bugs / to-dos:
 """
 
 import numpy as np
-from sklearn.neighbors import KDTree
+from scipy.misc import logsumexp
 
 G = 6.67408e-11 # m m m / kg / s / s
 twopiG = 2. * np.pi * G
@@ -32,17 +32,32 @@ yr = 365.25 * 24. * 3600. * s
 Myr = 1.e6 * yr
 sigunits = 1. * M_sun / (pc ** 2)
 
-def ln_like(pars, qs, invariants, order=3):
+def ln_like(qs, invariants, order=3):
     """
     comments:
-    - It is best to call this with something like invariants -
-      mean(invariants),
+    - This function has a `posteriorlnvar` addition that approximates
+      the relevant marginalization over the `order+1` linear
+      parameters.
+    - It is best to call this with something like
+      `invariants - mean(invariants)`.
+
+    bugs:
+    - prior var grid hard-coded
+    - possible sign issue with posteriorlnvar
+    - can't compare values taken at different orders bc priors not
+      proper
+    - impossibly complex list comprehension
     """
-    var = pars
+    priorvars = np.exp(np.arange(np.log(0.02), np.log(0.25), np.log(1.01)))
+    lndprior = -1. * np.log(len(priorvars))
     AT = np.vstack([invariants ** k for k in range(order+1)])
     A = AT.T
-    x = np.linalg.solve(np.dot(AT, A), np.dot(AT, qs))
-    return -0.5 * np.sum((qs - np.dot(A, x)) ** 2 / var + np.log(var))
+    ATA = np.dot(AT, A)
+    x = np.linalg.solve(ATA, np.dot(AT, qs))
+    foo, lnATA = np.linalg.slogdet(ATA)
+    summed_likelihood = logsumexp([-0.5 * np.sum((qs - np.dot(A, x)) ** 2 / var + np.log(var))
+                                    - 0.5 * (lnATA - np.log(var)) for var in priorvars])
+    return lndprior + summed_likelihood
 
 def pure_sech(z, pars):
     surfacedensity, scaleheight = pars
