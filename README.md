@@ -15,4 +15,4 @@ Copyright 2018 the authors.
 - matplotlib
 - astropy
 - pyia
-- sklearn.neighbors
+- scipy
