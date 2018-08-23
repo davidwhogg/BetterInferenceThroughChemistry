@@ -138,6 +138,8 @@ def plot_lf_slices(sunpars0, dynpars0, metalname, metallabel):
         (2, sigunits, "sigma", 15.),
         (3, pc, "scaleheight", 300.),
         ]:
+        metals = getattr(galah, metalname)
+        okay = (metals > -2.) & (metals < 2.) # HACKY
         sunpars = 1. * sunpars0
         dynpars = 1. * dynpars0
         if k < 2:
@@ -158,7 +160,7 @@ def plot_lf_slices(sunpars0, dynpars0, metalname, metallabel):
             Jzs, phis, blob = paint_actions_angles(zs, vs, sunpars, dynpars, blob=blob)
             invariants = Jzs
             invariants -= np.mean(invariants)
-            llfs[j] = ln_like(getattr(galah, metalname), invariants)
+            llfs[j] = ln_like(metals[okay], invariants[okay])
         plt.clf()
         plt.plot(parsis / units, llfs, "ko", alpha=0.75)
         plt.plot(parsis / units, llfs, "k-", alpha=0.75)
@@ -204,12 +206,12 @@ if __name__ == "__main__":
     dynpars0 = np.array([64. * sigunits, 400. * pc])
 
     for metalname, metallabel in [
+        ("eu_fe", "[Ee / Fe]"),
+        ("al_fe", "[Al / Fe]"),
         ("fe_h", "[Fe / H]"),
         ("na_fe", "[Na / Fe]"),
         ("mg_fe", "[Mg / Fe]"),
-        ("al_fe", "[Al / Fe]"),
         ("ti_fe", "[Ti / Fe]"),
-        ("eu_fe", "[Ee / Fe]"),
         ]:
         plot_lf_slices(sunpars0, dynpars0, metalname, metallabel)
 
