@@ -205,16 +205,20 @@ if __name__ == "__main__":
     sunpars0 = np.array([0. * pc, 0. * km / s])
     dynpars0 = np.array([64. * sigunits, 400. * pc])
 
-    for metalname, metallabel in [
-        ("eu_fe", "[Ee / Fe]"),
-        ("al_fe", "[Al / Fe]"),
-        ("fe_h", "[Fe / H]"),
-        ("na_fe", "[Na / Fe]"),
-        ("mg_fe", "[Mg / Fe]"),
-        ("ti_fe", "[Ti / Fe]"),
-        ]:
+    # make list of all abundances
+    dir = np.array(galah.__dir__())
+    metalnames = dir[[("fe" in attr) & (attr[:2] != "e_") for attr in dir]]
+    metallabels = []
+    for metalname in metalnames:
+        foo = metalname.split("_")
+        metallabels.append("["+foo[0].capitalize()+"/"+foo[1].capitalize()+"]")
+    metallabels = np.array(metallabels)
+
+    # make all plots
+    for metalname, metallabel in zip(metalnames, metallabels):
         plot_lf_slices(sunpars0, dynpars0, metalname, metallabel)
 
+if False:
 
     # plot various things for some standard potential
     if False:
