@@ -16,6 +16,7 @@ bugs / to-dos:
 
 import numpy as np
 from scipy.misc import logsumexp
+from integrate_orbits import *
 
 def ln_like(qs, invariants, order=3):
     """
@@ -43,3 +44,54 @@ def ln_like(qs, invariants, order=3):
     summed_likelihood = logsumexp([-0.5 * np.sum((qs - np.dot(A, x)) ** 2 / var + np.log(var))
                                     - 0.5 * (lnATA - np.log(var)) for var in priorvars])
     return lndprior + summed_likelihood
+
+def ln_prior(pars):
+    """
+    such bad code
+    """
+    if pars[0] < -50.:
+        return -np.Inf
+    if pars[0] > 50.:
+        return -np.Inf
+    if pars[1] < -10.:
+        return -np.Inf
+    if pars[1] > 10.:
+        return -np.Inf
+    if pars[2] < np.log(20.):
+        return -np.Inf
+    if pars[2] > np.log(180.):
+        return -np.Inf
+    if pars[3] < np.log(100.):
+        return -np.Inf
+    if pars[3] > np.log(1000.):
+        return -np.Inf
+    return 0.
+
+def ln_post(pars, kinematicdata, elementdata, abundances=["fe_h", "mg_fe", ]):
+    """
+    comments:
+    - This function unpacks the pars, creates the invariants out of
+      the data, extracts the relevant abundances, and computes the
+      posterior on everything.
+    - Assumes that the `kinematicdata` input has various methods
+      defined.
+    - Note the `exp()` on the `dynpars`.
+    """
+    ln_p = ln_prior(pars)
+    if not np.isfinite(ln_p):
+        return -np.Inf
+    sunpars = pars[:2]
+    dynpars = np.exp(pars[2:])
+    zs = kinematicdata.z.to(u.pc).value
+    vs = kinematicdata.v_z.to(u.km/u.s).value
+    Jzs, phis, blob = paint_actions_angles(zs, vs, sunpars0, dynpars0)
+    invariants = Jzs - mean(Jzs)
+    ln_l = 0.
+    for abundance in abundances:
+        metals = getattr(elementdata, abundance)
+        okay = (metals > -2.) & (metals < 2.) # HACKY
+        ln_l += ln_like(metals[okay], invariants[okay])
+    return ln_p + ln_l
+
+def sample(pars0):
+    return 0.
