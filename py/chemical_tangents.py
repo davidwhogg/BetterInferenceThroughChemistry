@@ -12,6 +12,7 @@ bugs / to-dos:
 - Make it possible to use multiple abundances simultaneously.
 - Make it easy / possible to plot residuals away from the best-fit
   (or any chosen) model.
+- NEED TO SWITCH to using Astropy units correctly.
 """
 
 import numpy as np
@@ -79,8 +80,8 @@ def ln_post(pars, kinematicdata, elementdata, abundances=["fe_h", "mg_fe", ]):
     ln_p = ln_prior(pars)
     if not np.isfinite(ln_p):
         return -np.Inf
-    sunpars = pars[:2]
-    dynpars = np.array([np.exp(pars[2]), 400.])
+    sunpars = np.array([pars[0] * pc, pars[1] * km / s])
+    dynpars = np.array([np.exp(pars[2]) * sigunits, 400. * pc])
     zs = kinematicdata.z.to(u.pc).value
     vs = kinematicdata.v_z.to(u.km/u.s).value
     Jzs, phis, blob = paint_actions_angles(zs, vs, sunpars, dynpars)

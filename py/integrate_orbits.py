@@ -9,6 +9,10 @@ notes:
   been accounted for, so that the positions and velocities are
   properly referenced to the Galactic Plane, not the Sun. That is, any
   Solar position you fit for should be done outside this code.
+
+bugs / to-dos:
+--------------
+- NEED TO SWITCH to using Astropy units correctly.
 """
 
 import numpy as np
