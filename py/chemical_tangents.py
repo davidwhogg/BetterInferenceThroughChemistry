@@ -64,10 +64,6 @@ def ln_prior(pars):
         return -np.Inf
     if pars[2] > np.log(180.):
         return -np.Inf
-    if pars[3] < np.log(100.):
-        return -np.Inf
-    if pars[3] > np.log(1000.):
-        return -np.Inf
     return 0.
 
 def ln_post(pars, kinematicdata, elementdata, abundances=["fe_h", "mg_fe", ]):
@@ -84,7 +80,7 @@ def ln_post(pars, kinematicdata, elementdata, abundances=["fe_h", "mg_fe", ]):
     if not np.isfinite(ln_p):
         return -np.Inf
     sunpars = pars[:2]
-    dynpars = np.exp(pars[2:])
+    dynpars = np.array([np.exp(pars[2]), 400.])
     zs = kinematicdata.z.to(u.pc).value
     vs = kinematicdata.v_z.to(u.km/u.s).value
     Jzs, phis, blob = paint_actions_angles(zs, vs, sunpars, dynpars)
@@ -98,15 +94,15 @@ def ln_post(pars, kinematicdata, elementdata, abundances=["fe_h", "mg_fe", ]):
 
 def sample(kinematicdata, elementdata):
     nwalkers = 32
-    p0 = np.array([0., 0., np.log(65.), np.log(400.)])
+    p0 = np.array([-3., 2., np.log(65.)])
     ndim = len(p0)
-    p0 = p0[None, :] + 0.1 * np.random.normal(size = (nwalkers, ndim))
+    p0 = p0[None, :] + 0.01 * np.random.normal(size = (nwalkers, ndim))
     sampler = emcee.EnsembleSampler(nwalkers, ndim, ln_post, args=[kinematicdata, elementdata])
     print("sample(): starting burn-in")
-    pos, prob, state = sampler.run_mcmc(p0, 128) # burn in
+    pos, prob, state = sampler.run_mcmc(p0, 32) # burn in
     sampler.reset()
     print("sample(): starting proper run")
-    sampler.run_mcmc(pos, 64)
+    sampler.run_mcmc(pos, 32)
     print("sample(): done")
     return sampler.flatchain
 
@@ -114,7 +110,7 @@ def sample_and_plot(kinematicdata, elementdata):
     chain = sample(kinematicdata, elementdata)
     figure = corner.corner(chain,
                            labels=[r"$z_\mathrm{Sun}$ (pc)", r"$v_{z\mathrm{Sun}}$ (km/s)",
-                                   r"$\ln\Sigma$", r"$\ln h$"],
+                                   r"$\ln\Sigma$"],
                            range=[[-20., 20.], [-5., 5.],
-                                  [np.log(20.), np.log(180.)], [np.log(100.), np.log(1000.)]])
+                                  [np.log(20.), np.log(180.)]])
     return figure
