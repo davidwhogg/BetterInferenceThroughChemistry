@@ -73,7 +73,9 @@ def ln_prior(pars):
         return -np.Inf
     return 0.
 
-def ln_post(pars, kinematicdata, elementdata, abundances=["fe_h", "mg_fe", "al_fe", ]):
+def ln_post(pars, kinematicdata, elementdata,
+            abundances=["fe_h", ]):
+            # abundances=["fe_h", "al_fe", "ca_fe", "eu_fe", "mg_fe", "ni_fe", "o_fe", "si_fe", "y_fe", ]):
     """
     comments:
     - This function unpacks the pars, creates the invariants out of

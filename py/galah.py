@@ -209,6 +209,12 @@ if __name__ == "__main__":
     zs = galcen.z.to(u.pc).value * pc # note UNITS craziness
     vs = galcen.v_z.to(u.km/u.s).value * km / s # note UNITS craziness
 
+    # sample and corner plot
+    fig = sample_and_plot(galcen, galah)
+    hogg_savefig(fig, "corner.png")
+
+if False:
+
     # set fiducial parameters
     sunpars0 = np.array([0. * pc, 0. * km / s])
     dynpars0 = np.array([64. * sigunits, 400. * pc])
@@ -226,12 +232,6 @@ if __name__ == "__main__":
     # make all slice plots
     for metalname, metallabel in zip(metalnames, metallabels):
         plot_lf_slices(sunpars0, dynpars0, metalname, metallabel)
-
-    # sample and corner plot
-    fig = sample_and_plot(galcen, galah)
-    hogg_savefig(fig, "corner.png")
-
-if False:
 
     # plot various things for some standard potential
     if False:
