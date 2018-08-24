@@ -140,10 +140,10 @@ def plot_lf_slices(sunpars0, dynpars0, metalname, metallabel):
 
     # plot some likelihood sequences
     for k, units, name, scale in [
-        (0, pc, "zsun", 80.),
-        (1, km / s, "vsun", 4.),
+#        (0, pc, "zsun", 80.),
+#        (1, km / s, "vsun", 4.),
         (2, sigunits, "sigma", 15.),
-        (3, pc, "scaleheight", 300.),
+#        (3, pc, "scaleheight", 300.),
         ]:
         metals = getattr(galah, metalname)
         okay = (metals > -2.) & (metals < 2.) # HACKY
@@ -209,19 +209,14 @@ if __name__ == "__main__":
     zs = galcen.z.to(u.pc).value * pc # note UNITS craziness
     vs = galcen.v_z.to(u.km/u.s).value * km / s # note UNITS craziness
 
-    # sample and corner plot
-    fig = sample_and_plot(galcen, galah)
-    hogg_savefig(fig, "corner.png")
-
-if False:
-
     # set fiducial parameters
     sunpars0 = np.array([0. * pc, 0. * km / s])
     dynpars0 = np.array([64. * sigunits, 400. * pc])
 
     # make list of all abundances
-    dir = np.array(galah.__dir__())
-    metalnames = dir[[("fe" in attr) & (attr[:2] != "e_") for attr in dir]]
+    dirx = np.array(galah.__dir__())
+    inds = np.array([("fe" in attr) & (attr[:2] != "e_") for attr in dirx])
+    metalnames = dirx[inds]
     metallabels = []
     for metalname in metalnames:
         foo = metalname.split("_")
@@ -231,6 +226,12 @@ if False:
     # make all slice plots
     for metalname, metallabel in zip(metalnames, metallabels):
         plot_lf_slices(sunpars0, dynpars0, metalname, metallabel)
+
+    # sample and corner plot
+    fig = sample_and_plot(galcen, galah)
+    hogg_savefig(fig, "corner.png")
+
+if False:
 
     # plot various things for some standard potential
     if False:
