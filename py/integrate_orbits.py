@@ -7,19 +7,11 @@ notes:
 - Strictly SI units, which is INSANE.
 - These functions ASSUME that the Sun's position and velocity have
   been accounted for, so that the positions and velocities are
-  properly referenced to the Galactic Plane, not the Sun.
-
-bugs / to-dos:
---------------
-- Fix the LF to marginalize out offset and slope. Should be
-  possible. Right now it just sets it to ML.
-- Make it possible to use multiple abundances simultaneously.
-- Make it easy / possible to plot residuals away from the best-fit
-  (or any chosen) model.
+  properly referenced to the Galactic Plane, not the Sun. That is, any
+  Solar position you fit for should be done outside this code.
 """
 
 import numpy as np
-from scipy.misc import logsumexp
 
 G = 6.67408e-11 # m m m / kg / s / s
 twopiG = 2. * np.pi * G

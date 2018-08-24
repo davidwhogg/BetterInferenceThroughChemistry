@@ -21,6 +21,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pyia import GaiaData
 from integrate_orbits import *
+from chemical_tangents import *
 
 def hogg_savefig(thing, name):
     print("saving figure {}".format(name))
