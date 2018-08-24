@@ -2,6 +2,11 @@
 This file is part of the ChemicalTangents project.
 Copyright 2018 David W. Hogg (MPIA).
 
+to-do items:
+------------
+- Try splitting the sample by R_GC and see if there is a density
+  gradient?
+
 bugs:
 -----
 - I don't know what parameters Pyia is using to go to Galactic
@@ -17,9 +22,9 @@ import numpy as np
 from pyia import GaiaData
 from integrate_orbits import *
 
-def hogg_savefig(name):
+def hogg_savefig(thing, name):
     print("saving figure {}".format(name))
-    return plt.savefig(name)
+    return thing.savefig(name)
 
 def plot_some_abundances(galah, galcen):
     nx, ny = 3, 2
@@ -169,7 +174,7 @@ def plot_lf_slices(sunpars0, dynpars0, metalname, metallabel):
         plt.xlabel(name)
         plt.ylabel("log LF")
         plt.title(metallabel)
-        hogg_savefig("lf_{}_{}_test.png".format(name, metalname))
+        hogg_savefig(plt, "lf_{}_{}_test.png".format(name, metalname))
 
 if __name__ == "__main__":
 
@@ -226,11 +231,11 @@ if False:
         plt.clf()
         plt.scatter(vs / (km / s), zs / (pc), c=np.log(Jzs / (pc * km / s)), s=2)
         plt.colorbar()
-        hogg_savefig("deleteme_galah0.png")
+        hogg_savefig(plt, "deleteme_galah0.png")
         plt.clf()
         plt.scatter(vs / (km / s), zs / (pc), c=(phis * 180. / np.pi), s=2)
         plt.colorbar()
-        hogg_savefig("deleteme_galah3.png")
+        hogg_savefig(plt, "deleteme_galah3.png")
 
     if False:
         plt.clf()
@@ -239,7 +244,7 @@ if False:
         plt.plot(plotx, 0. + 0.004 * plotx, "r-", zorder=10)
         plt.xlabel(r"$v_\mathrm{max}$ (km / s)")
         plt.ylabel("{} (dex)".format(metallabel))
-        hogg_savefig("slope.png")
+        hogg_savefig(plt, "slope.png")
 
 if False:
 
@@ -261,7 +266,7 @@ if False:
 
     # plot
     fig, ax = plot_some_abundances(galah, galcen)
-    fig.savefig("galah_full_sample.pdf")
+    hogg_savefig(fig, "galah_full_sample.pdf")
     plt.close(fig)
 
     # make some plot sequences
@@ -271,25 +276,25 @@ if False:
     i = 0
     for j, off in enumerate(np.arange(-50., 51., 25.)):
         fig, ax = plotfunc(galah, galcen, i, off * pc)
-        fig.savefig("{}_{}_{}.pdf".format(plotname, i, j))
+        hogg_savefig(fig, "{}_{}_{}.pdf".format(plotname, i, j))
         plt.close(fig)
 
     i = 1
     for j, off in enumerate(np.arange(-4., 4.1, 2.)):
         fig, ax = plotfunc(galah, galcen, i, off * km / s)
-        fig.savefig("{}_{}_{}.pdf".format(plotname, i, j))
+        hogg_savefig(fig, "{}_{}_{}.pdf".format(plotname, i, j))
         plt.close(fig)
 
     i = 2
     for j, off in enumerate(np.arange(-20., 21., 10.)):
         fig, ax = plotfunc(galah, galcen, i, off * sigunits)
-        fig.savefig("{}_{}_{}.pdf".format(plotname, i, j))
+        hogg_savefig(fig, "{}_{}_{}.pdf".format(plotname, i, j))
         plt.close(fig)
 
     i = 3
     for j, off in enumerate(np.arange(-200., 201., 100.)):
         fig, ax = plotfunc(galah, galcen, i, off * pc)
-        fig.savefig("{}_{}_{}.pdf".format(plotname, i, j))
+        hogg_savefig(fig, "{}_{}_{}.pdf".format(plotname, i, j))
         plt.close(fig)
 
     print("__main__: done")
@@ -312,7 +317,7 @@ if False:
             ax[i].set_xlabel("$v_z$ [km/s]")
     ax[0].set_xlim(-vlim, vlim)
     ax[0].set_ylim(-zlim, zlim)
-    fig.savefig("galah_action_angle.pdf")
+    hogg_savefig(fig, "galah_action_angle.pdf")
     plt.close(fig)
 
     # plot actions and angles
@@ -328,7 +333,7 @@ if False:
     ax.set_ylabel(r"$v_\mathrm{max}$ [km/s]")
     ax.set_xlim(0, 2. * np.pi)
     ax.set_ylim(0, np.max(Jzs))
-    fig.savefig("galah_foo.pdf")
+    hogg_savefig(fig, "galah_foo.pdf")
     plt.close(fig)
 
     # plot angle plots
@@ -349,6 +354,6 @@ if False:
             ax[-1].set_xlabel(r"conjugate angle $\theta_z$ [rad]")
     ax[-1].set_xlim(0., 2. * np.pi)
     ax[-1].set_ylim(-0.5, 0.5)
-    fig.savefig("galah_mg_angle.pdf")
+    hogg_savefig(fig, "galah_mg_angle.pdf")
     plt.close(fig)
 
