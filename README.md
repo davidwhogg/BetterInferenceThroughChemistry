@@ -14,5 +14,7 @@ Copyright 2018 the authors.
 - numpy
 - matplotlib
 - astropy
-- pyia
 - scipy
+- pyia
+- emcee
+- corner

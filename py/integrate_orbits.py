@@ -208,7 +208,7 @@ def paint_actions_angles(atzs, atvs, sunpars, dynpars, blob=None):
     - See `linearly_interpolate()` for edge issues.
     """
     if blob is None:
-        print("paint_actions_angles: making action-angle grid")
+        # print("paint_actions_angles: making action-angle grid")
         dz, nz = 100. * (pc), 20
         dv, nv = 5. * (km / s), 15
         zs, vs, zmaxs, vmaxs, Jzs, phis = \
@@ -219,13 +219,13 @@ def paint_actions_angles(atzs, atvs, sunpars, dynpars, blob=None):
         blob = (dz, nz, dv, nv, xs, ys)
     else:
         dz, nz, dv, nv, xs, ys = blob
-    print("paint_actions_angles: interpolating")
+    # print("paint_actions_angles: interpolating")
     inzs = atzs + sunpars[0]
     invs = atvs + sunpars[1]
     outxs, outys = linearly_interpolate(inzs * np.sign(inzs), invs * np.sign(invs), blob)
     outphis = np.arctan2(outys * np.sign(inzs), outxs * np.sign(invs))
     outphis[outphis < 0.] += 2. * np.pi
-    print("paint_actions_angles: done")
+    # print("paint_actions_angles: done")
     return outxs ** 2 + outys ** 2, outphis, blob
 
 if __name__ == "__main__":

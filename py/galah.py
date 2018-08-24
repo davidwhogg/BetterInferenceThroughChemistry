@@ -178,6 +178,7 @@ def plot_lf_slices(sunpars0, dynpars0, metalname, metallabel):
         hogg_savefig(plt, "lf_{}_{}_test.png".format(name, metalname))
 
 if __name__ == "__main__":
+    plt.rc('text', usetex=True)
 
     # read data and cut
     print("__main__: reading and cutting galah data")
@@ -220,11 +221,15 @@ if __name__ == "__main__":
         metallabels.append("["+foo[0].capitalize()+"/"+foo[1].capitalize()+"]")
     metallabels = np.array(metallabels)
 
-    # make all plots
-    for metalname, metallabel in zip(metalnames, metallabels):
-        plot_lf_slices(sunpars0, dynpars0, metalname, metallabel)
+    # sample and corner plot
+    fig = sample_and_plot(galcen, galah)
+    hogg_savefig(fig, "corner.png")
 
 if False:
+
+    # make all slice plots
+    for metalname, metallabel in zip(metalnames, metallabels):
+        plot_lf_slices(sunpars0, dynpars0, metalname, metallabel)
 
     # plot various things for some standard potential
     if False:
