@@ -36,11 +36,25 @@ def hogg_savefig(thing, name):
     print("hogg_savefig(): saving figure {}".format(name))
     return thing.savefig(name)
 
-def plot_some_abundances(galah, galcen):
-    nx, ny = 3, 2
-    fig, ax = plt.subplots(ny, nx, figsize=(nx * 5, ny * 5), sharex=True, sharey=True)
-    ax = ax.flatten()
-    for i,aname in enumerate(abundancenames):
+def abundancenames():
+    abundances = ["fe_h", "al_fe", "ca_fe", "eu_fe", "mg_fe", "ni_fe", "o_fe", "si_fe", "y_fe", ]
+    abundancelabels = []
+    for abundance in abundances:
+        foo = abundance.split("_")
+        abundancelabels.append("["+foo[0].capitalize()+"/"+foo[1].capitalize()+"]")
+    return np.array(abundances), np.array(abundancelabels)
+
+def setup_abundance_plot_grid():
+    nx, ny = 3, 3
+    fig, axes = plt.subplots(ny, nx, figsize=(nx * 5, ny * 5), sharex=True, sharey=True)
+    axes = axes.flatten()
+    return fig, axes, nx, ny
+
+def plot_abundances(galah, galcen):
+    fig, ax, nx, ny = setup_abundance_plot_grid()
+    abundances, abundancelabels = abundancenames()
+
+    for i,(aname,alabel) in enumerate(zip(abundances, abundancelabels)):
         abundance = getattr(galah, aname)
         good = np.abs(abundance) < 5.
         vmin, vmax = np.percentile(abundance[good], [5., 95.])
@@ -49,7 +63,7 @@ def plot_some_abundances(galah, galcen):
                          marker=".", s=3000/np.sqrt(np.sum(good)),
                          c=abundance[good], vmin=vmin, vmax=vmax, alpha=0.3,
                          cmap=mpl.cm.plasma, rasterized=True)
-        ax[i].text(-vzmax * 0.96, zmax * 0.96, abundancelabels[aname], ha="left", va="top", backgroundcolor="w")
+        ax[i].text(-vzmax * 0.96, zmax * 0.96, alabel, ha="left", va="top", backgroundcolor="w")
         if i % nx == 0:
             ax[i].set_ylabel("$z$ [pc]")
         if i // nx + 1 == ny:
@@ -57,91 +71,6 @@ def plot_some_abundances(galah, galcen):
     ax[0].set_xlim(-vzmax, vzmax)
     ax[0].set_ylim(-zmax, zmax)
     fig.tight_layout()
-    return fig, ax
-
-def plot_uphis(galah, galcen, parindex, offset):
-    # get actions and angles
-    sunpars = np.array([0. * pc, 2. * km / s])
-    dynpars = np.array([65. * sigunits, 350 * pc])
-    if parindex < 2:
-        sunpars[parindex] += offset
-    else:
-        dynpars[parindex - 2] += offset
-    zs = galcen.z.to(u.pc).value + sunpars[0] / pc
-    vs = galcen.v_z.to(u.km/u.s).value + sunpars[1] / (km / s)
-    Jzs, phis, blob = paint_actions_angles(zs, vs, dynpars)
-    # exclude inner and outer rings, as it were
-    good = (Jzs > (np.min(Jzs) + 0.1)) & (Jzs < (np.max(Jzs) - 0.1))
-    Jzs = Jzs[good]
-    phis = phis[good]
-
-    # do some cray shit; not quite the right thing to do
-    uJzs = np.unique(np.sort(Jzs))
-    uphis  = np.unique(np.sort(phis))
-    mg_fe_minus_mean = 1. * galah[good].mg_fe
-    for vmax in uJzs:
-        this = Jzs == vmax
-        mg_fe_minus_mean[this] -= np.mean(galah[good][this].mg_fe)
-    mg_fe_offsets = np.zeros_like(uphis)
-    mg_fe_offsets_err = np.zeros_like(uphis)
-    for i, phi in enumerate(uphis):
-        this = phis == phi
-        mg_fe_offsets[i] = np.mean(mg_fe_minus_mean[this])
-        mg_fe_offsets_err[i] = np.sqrt(np.var(mg_fe_minus_mean[this]) / np.sum(this))
-
-    # plot mg_fe_offsets
-    nx, ny = 1, 1
-    fig, ax = plt.subplots(ny, nx, figsize=(nx * 10, ny * 5), sharex=True, sharey=True)
-    foo = ax.errorbar(uphis, mg_fe_offsets, fmt="k.", yerr=mg_fe_offsets_err)
-    ax.axhline(0., color="k", alpha=0.5, zorder=-10.)
-    ax.set_xlabel(r"$\theta_z$ [rad]")
-    ax.set_ylabel("mean [Mg/Fe] offset [dex]")
-    ax.set_xlim(0, 2 * np.pi)
-    ax.set_ylim(-0.2, 0.2)
-    plt.title(r"$z = {:.1f}$ pc; $v_z = {:.1f}$ km/s; $\Sigma = {:.0f}$ M/pc$^2$; $h = {:.0f}$ pc".format(
-            sunpars[0] / (pc), sunpars[1] / (km / s), dynpars[0] / (sigunits), dynpars[1] / (pc)))
-    return fig, ax
-
-def plot_uJzs(galah, galcen, parindex, offset):
-    # get actions and angles
-    sunpars = np.array([0. * pc, 2. * km / s])
-    dynpars = np.array([65. * sigunits, 400 * pc])
-    if parindex < 2:
-        sunpars[parindex] += offset
-    else:
-        dynpars[parindex - 2] += offset
-    zs = galcen.z.to(u.pc).value + sunpars[0] / pc
-    vs = galcen.v_z.to(u.km/u.s).value + sunpars[1] / (km / s)
-    Jzs, phis, blob = paint_actions_angles(zs, vs, dynpars)
-    # exclude inner and outer rings, as it were
-    good = (Jzs > (np.min(Jzs) + 0.1)) & (Jzs < (np.max(Jzs) - 0.1))
-    Jzs = Jzs[good]
-    phis = phis[good]
-
-    # do some cray shit; not quite the right thing to do
-    uJzs = np.unique(np.sort(Jzs))
-    mg_fe_lnvars = np.zeros_like(uJzs)
-    denominators = np.zeros_like(uJzs)
-    TINY = -8
-    for i,vmax in enumerate(uJzs):
-        this = Jzs == vmax
-        denominators[i] = np.sum(this) - 1.
-        var = np.var(galah[good][this].mg_fe)
-        mg_fe_lnvars[i] = np.log(var + np.exp(TINY))
-
-    # plot mg_fe_offsets
-    nx, ny = 1, 1
-    fig, ax = plt.subplots(ny, nx, figsize=(nx * 10, ny * 5), sharex=True, sharey=True)
-    ax.plot(uJzs, mg_fe_lnvars, "k.")
-    mean_lnvar = np.sum(mg_fe_lnvars * denominators) / np.sum(denominators)
-    print(mean_lnvar)
-    ax.axhline(mean_lnvar, color="k", alpha=0.5, zorder=-10)
-    ax.set_xlabel(r"$v_{\max}$ [km/s]")
-    ax.set_ylabel("log variance of [Mg/Fe] at that orbit [nat]")
-    ax.set_xlim(0., 80.) # km/s
-    ax.set_ylim(-4., -3.) # nats
-    plt.title(r"$z = {:.1f}$ pc; $v_z = {:.1f}$ km/s; $\Sigma = {:.0f}$ M/pc$^2$; $h = {:.0f}$ pc".format(
-            sunpars[0] / (pc), sunpars[1] / (km / s), dynpars[0] / (sigunits), dynpars[1] / (pc)))
     return fig, ax
 
 def plot_lf_slices(sunpars0, dynpars0, metalname, metallabel):
@@ -213,9 +142,10 @@ if __name__ == "__main__":
     galah = galah[inbox]
     galcen = galcen[inbox]
 
-    # make phase space
-    zs = galcen.z.to(u.pc).value * pc # note UNITS craziness
-    vs = galcen.v_z.to(u.km/u.s).value * km / s # note UNITS craziness
+    # make abundance plots
+    if True:
+        fig, ax = plot_abundances(galah, galcen)
+        hogg_savefig(fig, "galah_abundances.png")
 
     # sample and corner plot all, and then each individually
     abundances = ["fe_h", "al_fe", "ca_fe", "eu_fe", "mg_fe", "ni_fe", "o_fe", "si_fe", "y_fe", ]
