@@ -62,9 +62,9 @@ def ln_prior(pars):
         return -np.Inf
     if pars[1] > 5.:
         return -np.Inf
-    if pars[2] < np.log(20.):
+    if pars[2] < np.log(32.):
         return -np.Inf
-    if pars[2] > np.log(180.):
+    if pars[2] > np.log(128.):
         return -np.Inf
     if pars[3] < np.log(200.):
         return -np.Inf
@@ -99,16 +99,23 @@ def ln_post(pars, kinematicdata, elementdata, abundances):
     return ln_p + ln_l
 
 def sample(kinematicdata, elementdata, abundances):
-    nwalkers = 32
+    """
+    bugs:
+    -----
+    - initialization hard-coded
+    - all integers hard-coded
+    """
     p0 = np.array([0., 0., np.log(65.), np.log(400.), ])
+    nsteps = 256
+    nwalkers = 32
     ndim = len(p0)
     p0 = p0[None, :] + 0.01 * np.random.normal(size = (nwalkers, ndim))
     sampler = emcee.EnsembleSampler(nwalkers, ndim, ln_post, args=[kinematicdata, elementdata, abundances])
     print("sample(): starting burn-in")
-    pos, prob, state = sampler.run_mcmc(p0, 128) # burn in
+    pos, prob, state = sampler.run_mcmc(p0, nsteps / 2) # burn in
     sampler.reset()
     print("sample(): starting proper run")
-    sampler.run_mcmc(pos, 128)
+    sampler.run_mcmc(pos, nsteps)
     print("sample(): done")
     return sampler.flatchain
 
@@ -121,6 +128,6 @@ def sample_and_plot(kinematicdata, elementdata, abundances):
                                    r"$\ln h$", ],
                            range=[[-20., 20.],
                                   [-5., 5.],
-                                  [np.log(20.), np.log(180.)],
+                                  [np.log(32.), np.log(128.)],
                                   [np.log(200.), np.log(600.)], ])
-    return figure
+    return chain, figure

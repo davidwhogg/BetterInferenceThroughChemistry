@@ -20,12 +20,20 @@ import astropy.units as u
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+import pickle
+import os.path
 from pyia import GaiaData
 from integrate_orbits import *
 from chemical_tangents import *
 
+def pickle_to_file(thing, name):
+    print("pickle_to_file(): writing {}".format(name))
+    outfile = open(name, "wb")
+    pickle.dump(thing, outfile)
+    outfile.close()
+
 def hogg_savefig(thing, name):
-    print("saving figure {}".format(name))
+    print("hogg_savefig(): saving figure {}".format(name))
     return thing.savefig(name)
 
 def plot_some_abundances(galah, galcen):
@@ -211,13 +219,25 @@ if __name__ == "__main__":
 
     # sample and corner plot all, and then each individually
     abundances = ["fe_h", "al_fe", "ca_fe", "eu_fe", "mg_fe", "ni_fe", "o_fe", "si_fe", "y_fe", ]
-    print("__main__: working on {}".format("all"))
-    fig = sample_and_plot(galcen, galah, abundances)
-    hogg_savefig(fig, "corner_{}.png".format("all"))
+    picklefn = "samples_{}.pkl".format("all")
+    if os.path.isfile(picklefn):
+        print("__main__: skipping {}".format("all"))
+    else:
+        open(picklefn, "wb").close()
+        print("__main__: working on {}".format("all"))
+        samples, fig = sample_and_plot(galcen, galah, abundances)
+        hogg_savefig(fig, "corner_{}.png".format("all"))
+        pickle_to_file(samples, picklefn)
     for abundance in abundances:
-        print("__main__: working on {}".format(abundance))
-        fig = sample_and_plot(galcen, galah, [abundance, ])
-        hogg_savefig(fig, "corner_{}.png".format(abundance))
+        picklefn = "samples_{}.pkl".format(abundance)
+        if os.path.isfile(picklefn):
+            print("__main__: skipping {}".format(abundance))
+        else:
+            open(picklefn, "wb").close()
+            print("__main__: working on {}".format(abundance))
+            samples, fig = sample_and_plot(galcen, galah, [abundance, ])
+            hogg_savefig(fig, "corner_{}.png".format(abundance))
+            pickle_to_file(samples, picklefn)
 
 if False:
 
