@@ -209,8 +209,11 @@ if __name__ == "__main__":
     zs = galcen.z.to(u.pc).value * pc # note UNITS craziness
     vs = galcen.v_z.to(u.km/u.s).value * km / s # note UNITS craziness
 
-    # sample and corner plot
+    # sample and corner plot all, and then each individually
     abundances = ["fe_h", "al_fe", "ca_fe", "eu_fe", "mg_fe", "ni_fe", "o_fe", "si_fe", "y_fe", ]
+    print("__main__: working on {}".format("all"))
+    fig = sample_and_plot(galcen, galah, abundances)
+    hogg_savefig(fig, "corner_{}.png".format("all"))
     for abundance in abundances:
         print("__main__: working on {}".format(abundance))
         fig = sample_and_plot(galcen, galah, [abundance, ])
