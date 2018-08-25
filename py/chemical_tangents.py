@@ -9,7 +9,6 @@ notes:
 
 bugs / to-dos:
 --------------
-- Make it possible to use multiple abundances simultaneously.
 - Make it easy / possible to plot residuals away from the best-fit
   (or any chosen) model.
 - NEED TO SWITCH to using Astropy units correctly.
@@ -69,13 +68,11 @@ def ln_prior(pars):
         return -np.Inf
     if pars[3] < np.log(200.):
         return -np.Inf
-    if pars[3] > np.log(500.):
+    if pars[3] > np.log(600.):
         return -np.Inf
     return 0.
 
-def ln_post(pars, kinematicdata, elementdata,
-            abundances=["fe_h", ]):
-            # abundances=["fe_h", "al_fe", "ca_fe", "eu_fe", "mg_fe", "ni_fe", "o_fe", "si_fe", "y_fe", ]):
+def ln_post(pars, kinematicdata, elementdata, abundances):
     """
     comments:
     - This function unpacks the pars, creates the invariants out of
@@ -101,22 +98,22 @@ def ln_post(pars, kinematicdata, elementdata,
         ln_l += ln_like(metals[okay], invariants[okay])
     return ln_p + ln_l
 
-def sample(kinematicdata, elementdata):
+def sample(kinematicdata, elementdata, abundances):
     nwalkers = 32
     p0 = np.array([0., 0., np.log(65.), np.log(400.), ])
     ndim = len(p0)
     p0 = p0[None, :] + 0.01 * np.random.normal(size = (nwalkers, ndim))
-    sampler = emcee.EnsembleSampler(nwalkers, ndim, ln_post, args=[kinematicdata, elementdata])
+    sampler = emcee.EnsembleSampler(nwalkers, ndim, ln_post, args=[kinematicdata, elementdata, abundances])
     print("sample(): starting burn-in")
-    pos, prob, state = sampler.run_mcmc(p0, 32) # burn in
+    pos, prob, state = sampler.run_mcmc(p0, 128) # burn in
     sampler.reset()
     print("sample(): starting proper run")
-    sampler.run_mcmc(pos, 32)
+    sampler.run_mcmc(pos, 128)
     print("sample(): done")
     return sampler.flatchain
 
-def sample_and_plot(kinematicdata, elementdata):
-    chain = sample(kinematicdata, elementdata)
+def sample_and_plot(kinematicdata, elementdata, abundances):
+    chain = sample(kinematicdata, elementdata, abundances)
     figure = corner.corner(chain,
                            labels=[r"$z_\mathrm{Sun}$ (pc)",
                                    r"$v_{z\mathrm{Sun}}$ (km/s)",
@@ -125,5 +122,5 @@ def sample_and_plot(kinematicdata, elementdata):
                            range=[[-20., 20.],
                                   [-5., 5.],
                                   [np.log(20.), np.log(180.)],
-                                  [np.log(200.), np.log(500.)], ])
+                                  [np.log(200.), np.log(600.)], ])
     return figure

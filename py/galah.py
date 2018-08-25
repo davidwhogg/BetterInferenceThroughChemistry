@@ -210,8 +210,11 @@ if __name__ == "__main__":
     vs = galcen.v_z.to(u.km/u.s).value * km / s # note UNITS craziness
 
     # sample and corner plot
-    fig = sample_and_plot(galcen, galah)
-    hogg_savefig(fig, "corner.png")
+    abundances = ["fe_h", "al_fe", "ca_fe", "eu_fe", "mg_fe", "ni_fe", "o_fe", "si_fe", "y_fe", ]
+    for abundance in abundances:
+        print("__main__: working on {}".format(abundance))
+        fig = sample_and_plot(galcen, galah, [abundance, ])
+        hogg_savefig(fig, "corner_{}.png".format(abundance))
 
 if False:
 
