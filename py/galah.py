@@ -30,14 +30,22 @@ def pickle_to_file(thing, name):
     print("pickle_to_file(): writing {}".format(name))
     outfile = open(name, "wb")
     pickle.dump(thing, outfile)
+    return outfile.close()
+
+def unpickle_from_file(name):
+    print("unpickle_from_file(): reading {}".format(name))
+    outfile = open(name, "rb")
+    thing = pickle.load(outfile)
     outfile.close()
+    return thing
 
 def hogg_savefig(thing, name):
     print("hogg_savefig(): saving figure {}".format(name))
     return thing.savefig(name)
 
-def abundancenames():
-    abundances = ["fe_h", "al_fe", "ca_fe", "eu_fe", "mg_fe", "ni_fe", "o_fe", "si_fe", "y_fe", ]
+def get_abundancenames():
+                 #         8       12       13       14       20       28       39      63      
+    abundances = ["fe_h", "o_fe", "mg_fe", "al_fe", "si_fe", "ca_fe", "ni_fe", "y_fe", "eu_fe", ]
     abundancelabels = []
     for abundance in abundances:
         foo = abundance.split("_")
@@ -46,30 +54,52 @@ def abundancenames():
 
 def setup_abundance_plot_grid():
     nx, ny = 3, 3
-    fig, axes = plt.subplots(ny, nx, figsize=(nx * 5, ny * 5), sharex=True, sharey=True)
+    fig, axes = plt.subplots(ny, nx, figsize=(nx * 4, ny * 4), sharex=True, sharey=True)
     axes = axes.flatten()
+    foo, alabels = get_abundancenames()
+    [ax.text(0.02, 0.98, label, ha="left", va="top", transform=ax.transAxes) for ax, label in zip(axes, alabels)]
     return fig, axes, nx, ny
+
+def plot_samplings():
+    fig, ax, nx, ny = setup_abundance_plot_grid()
+    abundances, foo = get_abundancenames()
+
+    for i, aname in enumerate(abundances):
+        picklefn = "samples_{}.pkl".format(aname)
+        samples = unpickle_from_file(picklefn)
+        xs = np.exp(samples[:, 2])
+        ys = np.exp(samples[:, 3])
+        foo = ax[i].scatter(xs, ys,
+                            marker=".", s=10,
+                            c="k", alpha=0.3, rasterized=True)
+        if i % nx == 0:
+            ax[i].set_ylabel(r"scaleheight $h$ [pc]")
+        if i // nx + 1 == ny:
+            ax[i].set_xlabel(r"integrated surface density $\Sigma$ [usual units]")
+    ax[0].set_xlim(30., 120.)
+    ax[0].set_ylim(200., 600.)
+    fig.tight_layout()
+    return fig, ax
 
 def plot_abundances(galah, galcen):
     fig, ax, nx, ny = setup_abundance_plot_grid()
-    abundances, abundancelabels = abundancenames()
+    abundances, foo = get_abundancenames()
 
-    for i,(aname,alabel) in enumerate(zip(abundances, abundancelabels)):
+    for i, aname in enumerate(abundances):
         abundance = getattr(galah, aname)
         good = np.abs(abundance) < 5.
         vmin, vmax = np.percentile(abundance[good], [5., 95.])
         foo = ax[i].scatter(galcen[good].v_z.to(u.km/u.s).value, 
-                         galcen[good].z.to(u.pc).value,
-                         marker=".", s=3000/np.sqrt(np.sum(good)),
-                         c=abundance[good], vmin=vmin, vmax=vmax, alpha=0.3,
-                         cmap=mpl.cm.plasma, rasterized=True)
-        ax[i].text(-vzmax * 0.96, zmax * 0.96, alabel, ha="left", va="top", backgroundcolor="w")
+                            galcen[good].z.to(u.pc).value,
+                            marker=".", s=3000/np.sqrt(np.sum(good)),
+                            c=abundance[good], vmin=vmin, vmax=vmax, alpha=0.3,
+                            cmap=mpl.cm.plasma, rasterized=True)
         if i % nx == 0:
             ax[i].set_ylabel("$z$ [pc]")
         if i // nx + 1 == ny:
             ax[i].set_xlabel("$v_z$ [km/s]")
-    ax[0].set_xlim(-vzmax, vzmax)
-    ax[0].set_ylim(-zmax, zmax)
+    ax[0].set_xlim(-75., 75.)
+    ax[0].set_ylim(-2000., 2000.)
     fig.tight_layout()
     return fig, ax
 
@@ -143,12 +173,12 @@ if __name__ == "__main__":
     galcen = galcen[inbox]
 
     # make abundance plots
-    if True:
+    if False:
         fig, ax = plot_abundances(galah, galcen)
         hogg_savefig(fig, "galah_abundances.png")
 
     # sample and corner plot all, and then each individually
-    abundances = ["fe_h", "al_fe", "ca_fe", "eu_fe", "mg_fe", "ni_fe", "o_fe", "si_fe", "y_fe", ]
+    abundances, abundancelabels = get_abundancenames()
     picklefn = "samples_{}.pkl".format("all")
     if os.path.isfile(picklefn):
         print("__main__: skipping {}".format("all"))
@@ -169,23 +199,18 @@ if __name__ == "__main__":
             hogg_savefig(fig, "corner_{}.png".format(abundance))
             pickle_to_file(samples, picklefn)
 
+    if True:
+        fig, ax = plot_samplings()
+        hogg_savefig(fig, "dynpars_samplings.png")
+
 if False:
 
     # set fiducial parameters
     sunpars0 = np.array([0. * pc, 0. * km / s])
     dynpars0 = np.array([64. * sigunits, 400. * pc])
 
-    # make list of all abundances
-    dirx = np.array(galah.__dir__())
-    inds = np.array([("fe" in attr) & (attr[:2] != "e_") for attr in dirx])
-    metalnames = dirx[inds]
-    metallabels = []
-    for metalname in metalnames:
-        foo = metalname.split("_")
-        metallabels.append("["+foo[0].capitalize()+"/"+foo[1].capitalize()+"]")
-    metallabels = np.array(metallabels)
-
     # make all slice plots
+    metalnames, metallabels = get_abundancenames()
     for metalname, metallabel in zip(metalnames, metallabels):
         plot_lf_slices(sunpars0, dynpars0, metalname, metallabel)
 
