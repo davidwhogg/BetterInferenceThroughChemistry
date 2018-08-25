@@ -64,12 +64,20 @@ def plot_samplings():
     fig, ax, nx, ny = setup_abundance_plot_grid()
     abundances, foo = get_abundancenames()
 
+    picklefn = "samples_{}.pkl".format("all")
+    samples = unpickle_from_file(picklefn)
+    allxs = np.exp(samples[:, 2])
+    allys = np.exp(samples[:, 3])
+
     for i, aname in enumerate(abundances):
         picklefn = "samples_{}.pkl".format(aname)
         samples = unpickle_from_file(picklefn)
         xs = np.exp(samples[:, 2])
         ys = np.exp(samples[:, 3])
         foo = ax[i].scatter(xs, ys,
+                            marker=".", s=10,
+                            c="0.5", alpha=0.3, rasterized=True)
+        foo = ax[i].scatter(allxs, allys,
                             marker=".", s=10,
                             c="k", alpha=0.3, rasterized=True)
         if i % nx == 0:
