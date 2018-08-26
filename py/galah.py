@@ -222,6 +222,8 @@ if __name__ == "__main__":
         fig, ax, fig2, ax2 = plot_samplings()
         hogg_savefig(fig, "dynpars_samplings.png")
         hogg_savefig(fig2, "sunpars_samplings.png")
+        fig.close()
+        fig2.close()
 
 if False:
 
@@ -254,115 +256,3 @@ if False:
         plt.xlabel(r"$v_\mathrm{max}$ (km / s)")
         plt.ylabel("{} (dex)".format(metallabel))
         hogg_savefig(plt, "slope.png")
-
-if False:
-
-    # decide what and how to plot
-    galah.mn_mg = galah.mn_fe - galah.mg_fe
-    galah.eu_mg = galah.eu_fe - galah.mg_fe
-    abundancenames = ["fe_h", "mg_fe", "o_fe", "al_fe", "mn_mg", "eu_mg"]
-    abundancelabels = {}
-    abundancelabels["fe_h"] = "[Fe/H]"
-    abundancelabels["mg_fe"] = "[Mg/Fe]"
-    abundancelabels["o_fe"] = "[O/Fe]"
-    abundancelabels["al_fe"] = "[Al/Fe]"
-    abundancelabels["mn_fe"] = "[Mn/Fe]"
-    abundancelabels["eu_fe"] = "[Eu/Fe]"
-    abundancelabels["mn_mg"] = "[Mn/Mg]"
-    abundancelabels["eu_mg"] = "[Eu/Mg]"
-    zmax = 1500. # pc
-    vzmax = 75. # km / s
-
-    # plot
-    fig, ax = plot_some_abundances(galah, galcen)
-    hogg_savefig(fig, "galah_full_sample.pdf")
-    plt.close(fig)
-
-    # make some plot sequences
-    print("__main__: starting plotting cycle")
-    # plotname, plotfunc = "offset_uphi", plot_uphis
-    plotname, plotfunc = "lnvar_uvmax", plot_uJzs
-    i = 0
-    for j, off in enumerate(np.arange(-50., 51., 25.)):
-        fig, ax = plotfunc(galah, galcen, i, off * pc)
-        hogg_savefig(fig, "{}_{}_{}.pdf".format(plotname, i, j))
-        plt.close(fig)
-
-    i = 1
-    for j, off in enumerate(np.arange(-4., 4.1, 2.)):
-        fig, ax = plotfunc(galah, galcen, i, off * km / s)
-        hogg_savefig(fig, "{}_{}_{}.pdf".format(plotname, i, j))
-        plt.close(fig)
-
-    i = 2
-    for j, off in enumerate(np.arange(-20., 21., 10.)):
-        fig, ax = plotfunc(galah, galcen, i, off * sigunits)
-        hogg_savefig(fig, "{}_{}_{}.pdf".format(plotname, i, j))
-        plt.close(fig)
-
-    i = 3
-    for j, off in enumerate(np.arange(-200., 201., 100.)):
-        fig, ax = plotfunc(galah, galcen, i, off * pc)
-        hogg_savefig(fig, "{}_{}_{}.pdf".format(plotname, i, j))
-        plt.close(fig)
-
-    print("__main__: done")
-
-if False:
-
-    # plot
-    nx, ny = 2, 1
-    fig, ax = plt.subplots(ny, nx, figsize=(nx * 5, ny * 5), sharex=True, sharey=True)
-    ax = ax.flatten()
-    for i, q in enumerate([Jzs, phis]):
-        vmin, vmax = np.percentile(q, [0.1, 99.9])
-        foo = ax[i].scatter(vs, zs,
-                         marker=".", s=3000/np.sqrt(len(vs)),
-                         c=q, vmin=vmin, vmax=vmax, alpha=0.3,
-                         cmap=mpl.cm.plasma, rasterized=True)
-        if i % nx == 0:
-            ax[i].set_ylabel("$z$ [pc]")
-        if i // nx + 1 == ny:
-            ax[i].set_xlabel("$v_z$ [km/s]")
-    ax[0].set_xlim(-vlim, vlim)
-    ax[0].set_ylim(-zlim, zlim)
-    hogg_savefig(fig, "galah_action_angle.pdf")
-    plt.close(fig)
-
-    # plot actions and angles
-    nx, ny = 1, 1
-    fig, ax = plt.subplots(ny, nx, figsize=(nx * 5, ny * 5), sharex=True, sharey=True)
-    q = mg_fe_minus_mean
-    vmin, vmax = -0.25, 0.25
-    foo = ax.scatter(phis, Jzs,
-                     marker=".", s=3000/np.sqrt(len(vs)),
-                     c=q, vmin=vmin, vmax=vmax, alpha=0.3,
-                     cmap=mpl.cm.RdBu, rasterized=True)
-    ax.set_xlabel(r"conjugate angle $\theta_z$ [rad]")
-    ax.set_ylabel(r"$v_\mathrm{max}$ [km/s]")
-    ax.set_xlim(0, 2. * np.pi)
-    ax.set_ylim(0, np.max(Jzs))
-    hogg_savefig(fig, "galah_foo.pdf")
-    plt.close(fig)
-
-    # plot angle plots
-    nx, ny = 1, 8
-    fig, ax = plt.subplots(ny, nx, figsize=(10, 10), sharex=True, sharey=True)
-    q = Jzs
-    vmin, vmax = np.percentile(q, [0.5, 99.5])
-    for i in range(ny):
-        vmaxlims = np.percentile(Jzs, [100 * i / ny, 100 * (i + 1) / ny])
-        inside = (Jzs > vmaxlims[0]) * (Jzs < vmaxlims[1])
-        foo = ax[i].scatter(phis[inside], mg_fe_minus_mean[inside],
-                            marker=".", s=1000/np.sqrt(np.sum(inside)),
-                            c=q[inside], vmin=vmin, vmax=vmax, alpha=0.3,
-                            cmap=mpl.cm.plasma, rasterized=True)
-        if i % nx == 0:
-            ax[-1].set_ylabel("[Mg/Fe] offset [dex]")
-        if i // nx + 1 == ny:
-            ax[-1].set_xlabel(r"conjugate angle $\theta_z$ [rad]")
-    ax[-1].set_xlim(0., 2. * np.pi)
-    ax[-1].set_ylim(-0.5, 0.5)
-    hogg_savefig(fig, "galah_mg_angle.pdf")
-    plt.close(fig)
-
