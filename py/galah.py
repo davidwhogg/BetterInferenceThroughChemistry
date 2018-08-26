@@ -65,6 +65,9 @@ def plot_samplings():
     fig2, ax2, foo, bar = setup_abundance_plot_grid()
     abundances, foo = get_abundancenames()
 
+    color, alpha = "0.5", 0.3
+    allcolor, allalpha = "k", 0.01
+
     picklefn = "samples_{}.pkl".format("all")
     allsamples = unpickle_from_file(picklefn)
     allxs = np.exp(allsamples[:, 2])
@@ -77,16 +80,16 @@ def plot_samplings():
         ys = np.exp(samples[:, 3])
         foo = ax[i].scatter(xs, ys,
                             marker=".", s=10,
-                            c="0.5", alpha=0.3, rasterized=True)
+                            c=color, alpha=alpha, rasterized=True)
         foo = ax[i].scatter(allxs, allys,
                             marker=".", s=10,
-                            c="k", alpha=0.3, rasterized=True)
+                            c=allcolor, alpha=allalpha, rasterized=True)
         foo = ax2[i].scatter(samples[:, 1], samples[:, 0],
                              marker=".", s=10,
-                             c="0.5", alpha=0.3, rasterized=True)
+                             c=color, alpha=alpha, rasterized=True)
         foo = ax2[i].scatter(allsamples[:, 1], allsamples[:, 0],
                              marker=".", s=10,
-                             c="k", alpha=0.3, rasterized=True)
+                             c=allcolor, alpha=allalpha, rasterized=True)
         if i // nx + 1 == ny:
             ax[i].set_xlabel(r"integrated surface density $\Sigma$ [usual units]")
             ax2[i].set_xlabel(r"Sun's $v_z$ velocity [km / s]")
@@ -222,8 +225,8 @@ if __name__ == "__main__":
         fig, ax, fig2, ax2 = plot_samplings()
         hogg_savefig(fig, "dynpars_samplings.png")
         hogg_savefig(fig2, "sunpars_samplings.png")
-        fig.close()
-        fig2.close()
+        plt.close(fig)
+        plt.close(fig2)
 
 if False:
 
