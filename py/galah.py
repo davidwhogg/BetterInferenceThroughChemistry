@@ -62,12 +62,13 @@ def setup_abundance_plot_grid():
 
 def plot_samplings():
     fig, ax, nx, ny = setup_abundance_plot_grid()
+    fig2, ax2, foo, bar = setup_abundance_plot_grid()
     abundances, foo = get_abundancenames()
 
     picklefn = "samples_{}.pkl".format("all")
-    samples = unpickle_from_file(picklefn)
-    allxs = np.exp(samples[:, 2])
-    allys = np.exp(samples[:, 3])
+    allsamples = unpickle_from_file(picklefn)
+    allxs = np.exp(allsamples[:, 2])
+    allys = np.exp(allsamples[:, 3])
 
     for i, aname in enumerate(abundances):
         picklefn = "samples_{}.pkl".format(aname)
@@ -80,14 +81,24 @@ def plot_samplings():
         foo = ax[i].scatter(allxs, allys,
                             marker=".", s=10,
                             c="k", alpha=0.3, rasterized=True)
-        if i % nx == 0:
-            ax[i].set_ylabel(r"scaleheight $h$ [pc]")
+        foo = ax2[i].scatter(samples[:, 1], samples[:, 0],
+                             marker=".", s=10,
+                             c="0.5", alpha=0.3, rasterized=True)
+        foo = ax2[i].scatter(allsamples[:, 1], allsamples[:, 0],
+                             marker=".", s=10,
+                             c="k", alpha=0.3, rasterized=True)
         if i // nx + 1 == ny:
             ax[i].set_xlabel(r"integrated surface density $\Sigma$ [usual units]")
+            ax2[i].set_xlabel(r"Sun's $v_z$ velocity [km / s]")
+        if i % nx == 0:
+            ax[i].set_ylabel(r"scaleheight $h$ [pc]")
+            ax2[i].set_ylabel(r"sun's $z$ position [pc]")
     ax[0].set_xlim(30., 120.)
     ax[0].set_ylim(200., 600.)
+    ax2[0].set_xlim(-5., 5.)
+    ax2[0].set_ylim(-20., 20.)
     fig.tight_layout()
-    return fig, ax
+    return fig, ax, fig2, ax2
 
 def plot_abundances(galah, galcen):
     fig, ax, nx, ny = setup_abundance_plot_grid()
@@ -102,10 +113,10 @@ def plot_abundances(galah, galcen):
                             marker=".", s=3000/np.sqrt(np.sum(good)),
                             c=abundance[good], vmin=vmin, vmax=vmax, alpha=0.3,
                             cmap=mpl.cm.plasma, rasterized=True)
-        if i % nx == 0:
-            ax[i].set_ylabel("$z$ [pc]")
         if i // nx + 1 == ny:
             ax[i].set_xlabel("$v_z$ [km/s]")
+        if i % nx == 0:
+            ax[i].set_ylabel("$z$ [pc]")
     ax[0].set_xlim(-75., 75.)
     ax[0].set_ylim(-2000., 2000.)
     fig.tight_layout()
@@ -208,8 +219,9 @@ if __name__ == "__main__":
             pickle_to_file(samples, picklefn)
 
     if True:
-        fig, ax = plot_samplings()
+        fig, ax, fig2, ax2 = plot_samplings()
         hogg_savefig(fig, "dynpars_samplings.png")
+        hogg_savefig(fig2, "sunpars_samplings.png")
 
 if False:
 
