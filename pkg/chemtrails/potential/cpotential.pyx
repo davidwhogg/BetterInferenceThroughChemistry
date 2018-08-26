@@ -34,7 +34,7 @@ __all__ = ['Sech2Potential']
 cdef class Sech2Wrapper(CPotentialWrapper):
 
     def __init__(self, G, parameters, q0):
-        self.init([G] + list(parameters), np.ascontiguousarray(q0))
+        self.init([G] + list(parameters), np.ascontiguousarray(q0), n_dim=1)
         self.cpotential.value[0] = <energyfunc>(sech2_energy)
         self.cpotential.gradient[0] = <gradientfunc>(sech2_gradient)
 
@@ -67,4 +67,5 @@ class Sech2Potential(CPotentialBase):
                                              parameter_physical_types=ptypes,
                                              units=units,
                                              origin=origin,
-                                             Wrapper=Sech2Wrapper)
+                                             Wrapper=Sech2Wrapper,
+                                             ndim=1)
