@@ -52,11 +52,19 @@ def get_abundancenames():
         abundancelabels.append("["+foo[0].capitalize()+"/"+foo[1].capitalize()+"]")
     return np.array(abundances), np.array(abundancelabels)
 
-def setup_abundance_plot_grid():
+def setup_abundance_plot_grid(reference = None):
     nx, ny = 3, 3
     fig, axes = plt.subplots(ny, nx, figsize=(nx * 4, ny * 4), sharex=True, sharey=True)
     axes = axes.flatten()
     foo, alabels = get_abundancenames()
+
+    # super-brittle and terrible!
+    if reference is not None:
+        refel = reference.split("_")[0].capitalize()
+        for i in range(len(alabels)):
+            if foo[i] != "fe_h":
+                alabels[i] = alabels[i].split("/")[0]+"/"+refel+"]"
+
     [ax.text(0.02, 0.98, label, ha="left", va="top", transform=ax.transAxes) for ax, label in zip(axes, alabels)]
     return fig, axes, nx, ny
 
@@ -103,12 +111,20 @@ def plot_samplings():
     fig.tight_layout()
     return fig, ax, fig2, ax2
 
-def plot_abundances(galah, galcen):
-    fig, ax, nx, ny = setup_abundance_plot_grid()
+def plot_abundances(galah, galcen, reference = None):
+    fig, ax, nx, ny = setup_abundance_plot_grid(reference = reference)
     abundances, foo = get_abundancenames()
+
+    # super-brittle and terrible!
+    if reference is None:
+        references = 0.
+    else:
+        references = getattr(galah, reference)
 
     for i, aname in enumerate(abundances):
         abundance = getattr(galah, aname)
+        if aname != "fe_h":
+            abundance -= references
         good = np.abs(abundance) < 5.
         vmin, vmax = np.percentile(abundance[good], [5., 95.])
         foo = ax[i].scatter(galcen[good].v_z.to(u.km/u.s).value, 
@@ -195,9 +211,12 @@ if __name__ == "__main__":
     galcen = galcen[inbox]
 
     # make abundance plots
-    if False:
+    if True:
         fig, ax = plot_abundances(galah, galcen)
         hogg_savefig(fig, "galah_abundances.png")
+    if True:
+        fig, ax = plot_abundances(galah, galcen, reference="o_fe")
+        hogg_savefig(fig, "galah_abundances_O.png")
 
     # sample and corner plot all, and then each individually
     abundances, abundancelabels = get_abundancenames()
