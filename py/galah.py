@@ -43,29 +43,48 @@ def hogg_savefig(thing, name):
     print("hogg_savefig(): saving figure {}".format(name))
     return thing.savefig(name)
 
-def get_abundancenames():
-                 #         8       12       13       14       20       28       39      63      
-    abundances = ["fe_h", "o_fe", "mg_fe", "al_fe", "si_fe", "ca_fe", "ni_fe", "y_fe", "eu_fe", ]
-    abundancelabels = []
-    for abundance in abundances:
-        foo = abundance.split("_")
-        abundancelabels.append("["+foo[0].capitalize()+"/"+foo[1].capitalize()+"]")
+def get_label_from_abundancename(name):
+    foo = name.split("_")
+    return "["+foo[0].capitalize()+"/"+foo[1].capitalize()+"]"
+
+def get_abundancenames(reference = "fe"):
+    if reference == "fe":
+                     #         8       12       13       14       20       28       39      63      
+        abundances = ["fe_h", "o_fe", "mg_fe", "al_fe", "si_fe", "ca_fe", "ni_fe", "y_fe", "eu_fe", ]
+    if reference == "o":
+                     #        12      13      14      20      26      28      39     63      
+        abundances = ["o_h", "mg_o", "al_o", "si_o", "ca_o", "fe_o", "ni_o", "y_o", "eu_o", ]
+    abundancelabels = [get_label_from_abundancename(name) for name in abundances]
     return np.array(abundances), np.array(abundancelabels)
 
-def setup_abundance_plot_grid(reference = None):
+def get_abundance_data(galah, abundancename):
+    """
+    Check this spaghetti code!
+    """
+    if abundancename == "fe_h":
+        print("get_abundance_data(): {} = fe_h".format(abundancename))
+        return getattr(galah, "fe_h")
+    numerator, denominator = abundancename.split("_")
+    if denominator == "fe":
+        print("get_abundance_data(): {} = {}".format(abundancename, abundancename))
+        return getattr(galah, abundancename)
+    if numerator == "fe":
+        print("get_abundance_data(): {} = 0. - {}".format(abundancename, denominator + "_" + numerator))
+        return 0. - getattr(galah, denominator + "_" + numerator)
+    if denominator == "h":
+        print("get_abundance_data(): {} = {} + fe_h".format(abundancename, numerator + "_fe"))
+        return getattr(galah, numerator + "_fe") + getattr(galah, "fe_h")
+    else:
+        print("get_abundance_data(): {} = {} - {}".format(abundancename, numerator + "_fe", denominator + "_fe"))
+        return getattr(galah, numerator + "_fe") - getattr(galah, denominator + "_fe")
+
+def setup_abundance_plot_grid(reference = "fe"):
     nx, ny = 3, 3
     fig, axes = plt.subplots(ny, nx, figsize=(nx * 4, ny * 4), sharex=True, sharey=True)
     axes = axes.flatten()
-    foo, alabels = get_abundancenames()
-
-    # super-brittle and terrible!
-    if reference is not None:
-        refel = reference.split("_")[0].capitalize()
-        for i in range(len(alabels)):
-            if foo[i] != "fe_h":
-                alabels[i] = alabels[i].split("/")[0]+"/"+refel+"]"
-
+    foo, alabels = get_abundancenames(reference = reference)
     [ax.text(0.02, 0.98, label, ha="left", va="top", transform=ax.transAxes) for ax, label in zip(axes, alabels)]
+    fig.tight_layout()
     return fig, axes, nx, ny
 
 def plot_samplings():
@@ -108,24 +127,15 @@ def plot_samplings():
     ax[0].set_ylim(200., 600.)
     ax2[0].set_xlim(-5., 5.)
     ax2[0].set_ylim(-20., 20.)
-    fig.tight_layout()
     return fig, ax, fig2, ax2
 
-def plot_abundances(galah, galcen, reference = None):
+def plot_abundances(galah, galcen, reference = "fe"):
     fig, ax, nx, ny = setup_abundance_plot_grid(reference = reference)
-    abundances, foo = get_abundancenames()
-
-    # super-brittle and terrible!
-    if reference is None:
-        references = 0.
-    else:
-        references = getattr(galah, reference)
+    abundances, foo = get_abundancenames(reference = reference)
 
     for i, aname in enumerate(abundances):
-        abundance = getattr(galah, aname)
-        if aname != "fe_h":
-            abundance -= references
-        good = np.abs(abundance) < 5.
+        abundance = get_abundance_data(galah, aname)
+        good = np.abs(abundance) < 2. # hack
         vmin, vmax = np.percentile(abundance[good], [5., 95.])
         foo = ax[i].scatter(galcen[good].v_z.to(u.km/u.s).value, 
                             galcen[good].z.to(u.pc).value,
@@ -138,7 +148,6 @@ def plot_abundances(galah, galcen, reference = None):
             ax[i].set_ylabel("$z$ [pc]")
     ax[0].set_xlim(-75., 75.)
     ax[0].set_ylim(-2000., 2000.)
-    fig.tight_layout()
     return fig, ax
 
 def plot_lf_slices(sunpars0, dynpars0, metalname, metallabel):
@@ -150,7 +159,7 @@ def plot_lf_slices(sunpars0, dynpars0, metalname, metallabel):
         (2, sigunits, "sigma", 15.),
 #        (3, pc, "scaleheight", 300.),
         ]:
-        metals = getattr(galah, metalname)
+        metals = get_abundance_data(galah, metalname)
         okay = (metals > -2.) & (metals < 2.) # HACKY
         sunpars = 1. * sunpars0
         dynpars = 1. * dynpars0
@@ -215,7 +224,7 @@ if __name__ == "__main__":
         fig, ax = plot_abundances(galah, galcen)
         hogg_savefig(fig, "galah_abundances.png")
     if True:
-        fig, ax = plot_abundances(galah, galcen, reference="o_fe")
+        fig, ax = plot_abundances(galah, galcen, reference="o")
         hogg_savefig(fig, "galah_abundances_O.png")
 
     # sample and corner plot all, and then each individually
