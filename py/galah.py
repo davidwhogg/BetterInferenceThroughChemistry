@@ -219,11 +219,17 @@ if __name__ == "__main__":
     galah = galah[inbox]
     galcen = galcen[inbox]
 
+    # call ln_post for profiling
+    p0 = np.array([0., 0., np.log(65.), np.log(400.), ])
+    for j in range(128):
+        ln_post(p0, galcen, galah, ["fe_h"] )
+    assert False
+
     # make abundance plots
-    if True:
+    if False:
         fig, ax = plot_abundances(galah, galcen)
         hogg_savefig(fig, "galah_abundances.png")
-    if True:
+    if False:
         fig, ax = plot_abundances(galah, galcen, reference="o")
         hogg_savefig(fig, "galah_abundances_O.png")
 
