@@ -17,6 +17,6 @@ void sech2_gradient(double t, double *pars, double *q, int n_dim,
         rho0 : midplane mass density
         z0 : scale height
     */
-    double A = 8 * pars[0] * M_PI * pars[1];
+    double A = 8 * pars[0] * M_PI * pars[1] * pars[2];
     grad[0] = A * tanh(0.5 * q[0] / pars[2]);
 }
