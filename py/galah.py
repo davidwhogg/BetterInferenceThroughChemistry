@@ -14,6 +14,7 @@ bugs:
 - NEED TO SWITCH to using Astropy units correctly.
 """
 
+from collections import namedtuple
 from astropy.table import Table
 import astropy.coordinates as coord
 import astropy.units as u
@@ -129,7 +130,7 @@ def plot_samplings():
     ax2[0].set_ylim(-20., 20.)
     return fig, ax, fig2, ax2
 
-def plot_abundances(galah, galcen, reference = "fe"):
+def plot_abundances(galah, kinematicdata, reference = "fe"):
     fig, ax, nx, ny = setup_abundance_plot_grid(reference = reference)
     abundances, foo = get_abundancenames(reference = reference)
 
@@ -137,8 +138,7 @@ def plot_abundances(galah, galcen, reference = "fe"):
         abundance = get_abundance_data(galah, aname)
         good = np.abs(abundance) < 2. # hack
         vmin, vmax = np.percentile(abundance[good], [5., 95.])
-        foo = ax[i].scatter(galcen[good].v_z.to(u.km/u.s).value, 
-                            galcen[good].z.to(u.pc).value,
+        foo = ax[i].scatter(kinematicdata.vz, kinematicdata.z,
                             marker=".", s=3000/np.sqrt(np.sum(good)),
                             c=abundance[good], vmin=vmin, vmax=vmax, alpha=0.3,
                             cmap=mpl.cm.plasma, rasterized=True)
@@ -150,7 +150,7 @@ def plot_abundances(galah, galcen, reference = "fe"):
     ax[0].set_ylim(-2000., 2000.)
     return fig, ax
 
-def plot_lf_slices(sunpars0, dynpars0, metalname, metallabel):
+def plot_lf_slices(galah, kinematicdata, sunpars0, dynpars0, metalname, metallabel):
 
     # plot some likelihood sequences
     for k, units, name, scale in [
@@ -176,7 +176,8 @@ def plot_lf_slices(sunpars0, dynpars0, metalname, metallabel):
         blob = None
         for j, parsi in enumerate(parsis):
             pars[i] = parsi
-            Es = paint_energies(zs, vs, sunpars, dynpars)
+            zs, vzs = kinematicdata.z * pc, kinematicdata.vz * km / s
+            Es = paint_energies(zs, vzs, sunpars, dynpars)
             invariants = Es
             invariants -= np.mean(invariants)
             llfs[j] = ln_like(metals[okay], invariants[okay])
@@ -217,12 +218,28 @@ if __name__ == "__main__":
     galah = galah[inbox]
     galcen = galcen[inbox]
 
+    # make kinematic-data object for `chemical_tangents.py`
+    KinematicData = namedtuple("KinematicData", ["z", "vz"])
+    kinematicdata = KinematicData(galcen.z.to(u.pc).value, galcen.v_z.to(u.km/u.s).value)
+
+    if True:
+        # set fiducial parameters
+        sunpars0 = np.array([0. * pc, 0. * km / s])
+        dynpars0 = np.array([64. * sigunits, 400. * pc])
+
+        # make all slice plots
+        metalnames = [l for l in galah.__dir__() if ("_fe" in l and l[:2] != "e_")]
+        metalnames.append("fe_h")
+        for metalname in metalnames:
+            metallabel = get_label_from_abundancename(metalname)
+            plot_lf_slices(galah, kinematicdata, sunpars0, dynpars0, metalname, metallabel)
+
     # make abundance plots
     if False:
-        fig, ax = plot_abundances(galah, galcen)
+        fig, ax = plot_abundances(galah, kinematicdata)
         hogg_savefig(fig, "galah_abundances.png")
     if False:
-        fig, ax = plot_abundances(galah, galcen, reference="o")
+        fig, ax = plot_abundances(galah, kinematicdata, reference="o")
         hogg_savefig(fig, "galah_abundances_O.png")
 
     # sample and corner plot all, and then each individually
@@ -233,7 +250,7 @@ if __name__ == "__main__":
     else:
         open(picklefn, "wb").close()
         print("__main__: working on {}".format("all"))
-        samples, fig = sample_and_plot(galcen, galah, abundances)
+        samples, fig = sample_and_plot(kinematicdata, galah, abundances)
         hogg_savefig(fig, "corner_{}.png".format("all"))
         pickle_to_file(samples, picklefn)
     for abundance in abundances:
@@ -243,7 +260,7 @@ if __name__ == "__main__":
         else:
             open(picklefn, "wb").close()
             print("__main__: working on {}".format(abundance))
-            samples, fig = sample_and_plot(galcen, galah, [abundance, ])
+            samples, fig = sample_and_plot(kinematicdata, galah, [abundance, ])
             hogg_savefig(fig, "corner_{}.png".format(abundance))
             pickle_to_file(samples, picklefn)
 
@@ -253,17 +270,6 @@ if __name__ == "__main__":
         hogg_savefig(fig2, "sunpars_samplings.png")
         plt.close(fig)
         plt.close(fig2)
-
-if False:
-
-    # set fiducial parameters
-    sunpars0 = np.array([0. * pc, 0. * km / s])
-    dynpars0 = np.array([64. * sigunits, 400. * pc])
-
-    # make all slice plots
-    metalnames, metallabels = get_abundancenames()
-    for metalname, metallabel in zip(metalnames, metallabels):
-        plot_lf_slices(sunpars0, dynpars0, metalname, metallabel)
 
     # plot various things for some standard potential
     if False:

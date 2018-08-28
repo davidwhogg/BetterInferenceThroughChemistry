@@ -91,7 +91,7 @@ def ln_post(pars, kinematicdata, elementdata, abundances):
       the data, extracts the relevant abundances, and computes the
       posterior on everything.
     - Assumes that the `kinematicdata` input has various methods
-      defined.
+      defined that return z in pc and vz in km / s
     - Note the `exp()` on the `dynpars`.
     """
     ln_p = ln_prior(pars)
@@ -99,8 +99,8 @@ def ln_post(pars, kinematicdata, elementdata, abundances):
         return -np.Inf
     sunpars = np.array([pars[0] * pc, pars[1] * km / s]) # units insanity
     dynpars = np.array([np.exp(pars[2]) * sigunits, np.exp(pars[3]) * pc]) # units insanity
-    zs = kinematicdata.z.to(u.pc).value * pc # units insanity
-    vs = kinematicdata.v_z.to(u.km/u.s).value * km / s # units insanity
+    zs = kinematicdata.z * pc
+    vs = kinematicdata.vz * km / s
     Es = paint_energies(zs, vs, sunpars, dynpars)
     invariants = Es - np.mean(Es)
     ln_l = 0.
