@@ -28,6 +28,8 @@
 % math macros
 \newcommand{\dd}{\mathrm{d}}
 \newcommand{\T}{^{\mathsf{T}}}
+\newcommand{\given}{\,|\,}
+\newcommand{\abundance}[2]{\mathrm{\left[{#1}/{#2}\right]}}
 
 % chemical macros
 \newcommand{\alphafe}{[\alpha/\mathrm{Fe}]}
@@ -339,7 +341,8 @@ vertical dynamics.
 
 \item[well mixed] HOGG: All angles equally likely. There is probably also a regular-orbits
 assumption here, but it won't enter in this \documentname\ because we are only doing
-one-dimensional dynamics.
+one-dimensional dynamics. The well-mixed assumption will be violated substantially in the data;
+we will discuss this more below.
 
 \item[selection] HOGG: Selection depends on position in the Milky Way, but not
 on element abundances. Really it could even depend on velocity! But it can't depend
@@ -367,9 +370,57 @@ HOGG: Dropping from 3-d to 1-d. In this case, let's start with 1-d. What about t
 HOGG: maximize conjugate-angle diversity at fixed element abundances?
 Or minimize abundance-ratio diversity at fixed orbit? The latter! Why?
 
-HOGG: LF description, with no marginalization.
+The model is, therefore, that the abundances depend only on the vertical actions.
+Briefly, it is that any observed abundance distribution
+$p(\abundance{X}{Y}\given J_z,\beta_{X/Y})$ for abundance
+$\abundance{X}{Y}$ at any action $J_z$ (and given some parameter settings $\beta_{X/Y}$)
+is a normal (Gaussian), with a variance $V$ that
+is independent of $J_z$ and a mean $\mu(J_z;\beta_{X/Y})$ that varies smoothly with $J_z$.
+In symbols:
+\begin{eqnarray}
+p(\abundance{X}{Y}_n\given J_{zn},\beta_{X/Y}) &=& N(\abundance{X}{Y}_n\given \mu(J_{zn};\beta_{X/Y}), V_{X/Y})
+\quad ,
+\end{eqnarray}
+where the $n$ is an index over stars, and $\beta_{X/Y}$ is a collection of parameters
+relevant to abundance $\abundance{X}{Y}$
+that includes
+parameters describing the smooth variation of the mean with action, and also includes
+the variance parameter $V_{X/Y}$.
+This being a probabilistic model for the data, it is a generative model and a likelihood function.
 
-HOGG: How we set priors on and marginalize the per-metal LFs
+Visual inspection of the data (\figurename~\ref{fig:data}) and additional tests we performed
+show that the chosen abundance ratio distributions
+are smooth functions of the vertical action for any potential;
+equivalently, the abundance gradients are smooth with height or velocity.
+For this reason, we model the dependence of the mean on the action with a cubic polynomial of
+the action.
+In detail we subtract the mean action from the actions before fitting the cubic, so that the
+cubic fit ``pivots'' around the mean action, not zero action.
+This detail is adopted to improve numerical stability but has no other influence on the model
+in the end.
+
+HOGG: How we set priors on and marginalize the per-metal LFs...
+In the end we don't care about the abundance-related parameters $\beta_{X/Y}$ so we marginalize
+them out explicitly, to focus on the dynamical side of the problem.
+Since the likelihood is Gaussian and the model is a linear function of polynomials of the actions,
+the marginalization over the cubic parameters in $\beta_{X/Y}$ is analytic if we choose
+Gaussian priors on these parameters.
+We adopt Gaussian priors here, and even take the limit in which they are much wider than
+the likelihood.
+This leads to an analytic marginalization:
+HOGG EQUATION HERE.
+The variance parameter $V_{X/Y}$ doesn't have this simple marginalization trick, so we apply a
+logarithmic prior (flat in $\ln V_{X/Y}$) and marginalize this out numerically.
+HOGG EQUATION HERE WITH LOGSUMEXP.
+
+Now the fully margninalized likelihood for the abundances still depends on the computation
+of the actions $J_z$. This is, indeed, the whole point of this project.
+So while we have fully marginalized out the abundance parameters $\beta_{X/Y}$, we have
+remaining a set of dynamical parameters $\theta$.
+The dynamical parameters set the conversion of observed positions and velocities into actions $J_z$
+and conjugate angles $\phi_z$.
+
+HOGG: Disk model and action/angle calculation.
 
 HOGG: Priors on the disk parameters.
 
