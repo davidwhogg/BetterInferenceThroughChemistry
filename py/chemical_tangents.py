@@ -21,8 +21,18 @@ import emcee
 import corner
 from integrate_orbits import *
 
-def ln_like(qs, invariants, order=3):
+def ln_like(qs, invariants, order=3, residuals=False):
     """
+    inputs:
+    - `qs`: a set of scalar abundnaces for a set of stars
+    - `invariants`: a set of dynamical invariants (one component, like Jz) for the same stars
+    - `order` (default 3): order of the polynomial model for the abundance mean
+    - `residuals` (default False): return residuals instead of the likelihood
+    
+    output:
+    - The fully marginalized log likelihood.
+    - OR, `if residuals`, the residuals away from the mean prediction (for visualization purposes)
+
     comments:
     - This function has a `posteriorlnvar` addition that approximates
       the relevant marginalization over the `order+1` linear
@@ -35,7 +45,7 @@ def ln_like(qs, invariants, order=3):
     - possible sign issue with posteriorlnvar
     - can't compare values taken at different orders bc priors not
       proper
-    - formulae needs checking; lots of 0.5s and signs and so on
+    - FORMULAE NEED CHECKING: lots of 0.5s and signs and so on
     """
     priorvars = np.exp(np.arange(np.log(0.02), np.log(0.25), np.log(1.01)))
     lndprior = -1. * np.log(len(priorvars))
@@ -43,9 +53,11 @@ def ln_like(qs, invariants, order=3):
     A = AT.T
     ATA = np.dot(AT, A)
     x = np.linalg.solve(ATA, np.dot(AT, qs))
+    if residuals:
+        return qs - np.dot(A, x)
     foo, lnATA = np.linalg.slogdet(ATA)
+    resid2sum = np.sum((qs - np.dot(A, x)) ** 2)
     nobj = len(qs)
-    resid2sum = np.sum(qs - np.dot(A, x) ** 2)
     summed_likelihood = -0.5 * logsumexp((resid2sum / priorvars + nobj * np.log(priorvars))
                                          + (lnATA - np.log(priorvars)))
     return lndprior + summed_likelihood
