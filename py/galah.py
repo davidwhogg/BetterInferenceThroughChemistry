@@ -176,10 +176,8 @@ def plot_lf_slices(sunpars0, dynpars0, metalname, metallabel):
         blob = None
         for j, parsi in enumerate(parsis):
             pars[i] = parsi
-            if recompute:
-                blob = None
-            Jzs, phis, blob = paint_actions_angles(zs, vs, sunpars, dynpars, blob=blob)
-            invariants = Jzs
+            Es = paint_energies(zs, vs, sunpars, dynpars)
+            invariants = Es
             invariants -= np.mean(invariants)
             llfs[j] = ln_like(metals[okay], invariants[okay])
         plt.clf()
@@ -218,12 +216,6 @@ if __name__ == "__main__":
     inbox = (zs / zlim) ** 2 + (vs / vlim) ** 2 < 1.
     galah = galah[inbox]
     galcen = galcen[inbox]
-
-    # call ln_post for profiling
-    p0 = np.array([0., 0., np.log(65.), np.log(400.), ])
-    for j in range(128):
-        ln_post(p0, galcen, galah, ["fe_h"] )
-    assert False
 
     # make abundance plots
     if False:

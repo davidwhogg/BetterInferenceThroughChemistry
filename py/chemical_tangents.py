@@ -101,8 +101,8 @@ def ln_post(pars, kinematicdata, elementdata, abundances):
     dynpars = np.array([np.exp(pars[2]) * sigunits, np.exp(pars[3]) * pc]) # units insanity
     zs = kinematicdata.z.to(u.pc).value * pc # units insanity
     vs = kinematicdata.v_z.to(u.km/u.s).value * km / s # units insanity
-    Jzs, phis, blob = paint_actions_angles(zs, vs, sunpars, dynpars)
-    invariants = Jzs - np.mean(Jzs)
+    Es = paint_energies(zs, vs, sunpars, dynpars)
+    invariants = Es - np.mean(Es)
     ln_l = 0.
     for abundance in abundances:
         metals = getattr(elementdata, abundance)
@@ -118,13 +118,13 @@ def sample(kinematicdata, elementdata, abundances):
     - all integers hard-coded
     """
     p0 = np.array([0., 0., np.log(65.), np.log(400.), ])
-    nsteps = 256
-    nwalkers = 32
+    nsteps = 512
+    nwalkers = 64
     ndim = len(p0)
     p0 = p0[None, :] + 0.01 * np.random.normal(size = (nwalkers, ndim))
     sampler = emcee.EnsembleSampler(nwalkers, ndim, ln_post, args=[kinematicdata, elementdata, abundances])
     print("sample(): starting burn-in")
-    pos, prob, state = sampler.run_mcmc(p0, nsteps / 2) # burn in
+    pos, prob, state = sampler.run_mcmc(p0, nsteps)
     sampler.reset()
     print("sample(): starting proper run")
     sampler.run_mcmc(pos, nsteps)

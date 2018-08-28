@@ -19,7 +19,7 @@ import numpy as np
 
 G = 6.67408e-11 # m m m / kg / s / s
 twopiG = 2. * np.pi * G
-fourG = 4. * G
+fourpiG = 4. * np.pi * G
 pc = 3.0857e16 # m
 M_sun = 1.9891e30 # kg
 km = 1000. # m
@@ -55,16 +55,25 @@ def ln_like(qs, invariants, order=3):
                                     - 0.5 * (lnATA - np.log(var)) for var in priorvars])
     return lndprior + summed_likelihood
 
-def pure_sech(z, pars):
+def sech_squared_acceleration(z, pars):
     surfacedensity, scaleheight = pars
-    return -8. * G * surfacedensity * np.arctan(np.tanh(z / scaleheight))
+    return -twopiG * surfacedensity * np.tanh(0.5 * z / scaleheight)
 
-def pure_exponential(z, pars):
+def sech_squared_potential(z, pars):
+    surfacedensity, scaleheight = pars
+    return fourpiG * surfacedensity * scaleheight * np.log(np.cosh(0.5 * z / scaleheight))
+
+def uniform_acceleration(z, pars):
+    density, = pars
+    return -fourpiG * density * z
+
+def uniform_potential(z, pars):
+    density, = pars
+    return twopiG * density * z * z
+
+def exponential_acceleration(z, pars):
     surfacedensity, scaleheight = pars
     return -twopiG * surfacedensity * (1. - np.exp(-np.abs(z) / scaleheight)) * np.sign(z)
-
-def dummy(z, pars):
-    return -1.5 * np.sign(z)
 
 def leapfrog_step(z, v, dt, acceleration, pars):
     znew = z + v * dt
@@ -146,7 +155,7 @@ def leapfrog_forward_to_zmax(z, v, timestep, acceleration, pars):
     action2 += 0.5 * fraction * np.abs(zs[t+1] - zs[t]) * (vs[t+1] + vs[t])
     return zmax, time_at_zmax, action1, action2
 
-def make_actions_angles_one_quadrant(z, v, pars, timestep = 0.1 * Myr, acceleration = pure_sech):
+def make_actions_angles_one_quadrant(z, v, pars, timestep = 0.1 * Myr, acceleration = sech_squared_acceleration):
     """
     bugs:
     - Note horrible (0., 0.) hack
@@ -158,6 +167,7 @@ def make_actions_angles_one_quadrant(z, v, pars, timestep = 0.1 * Myr, accelerat
     vmax, time_at_midplane, jz1, jz2 = leapfrog_back_to_midplane(z, v, timestep, acceleration, pars)
     zmax, time_at_zmax, jz3, jz4 = leapfrog_forward_to_zmax(z, v, timestep, acceleration, pars)
     phi = (0. - time_at_midplane) * 0.5 * np.pi / (time_at_zmax - time_at_midplane)
+    print((jz1 + jz3) / (jz2 + jz4) - 1.)
     return zmax, vmax, 2. * (jz1 + jz2 + jz3 + jz4), phi
 
 def make_action_angle_grid(zgrid, vgrid, pars):
@@ -202,6 +212,11 @@ def linearly_interpolate(inzs, invs, blob):
             zrs  * mvrs * ys[zinds + 1, vinds]     + \
             zrs  * vrs  * ys[zinds + 1, vinds + 1]
     return outxs, outys
+
+def paint_energies(atzs, atvs, sunpars, dynpars):
+    zs = atzs + sunpars[0]
+    vs = atvs + sunpars[1]
+    return 0.5 * vs * vs + sech_squared_potential(zs, dynpars)
 
 def paint_actions_angles(atzs, atvs, sunpars, dynpars, blob=None):
     """
@@ -274,9 +289,9 @@ if False:
     plt.clf()
     dz = 1.
     zs = np.arange(-1500. + 0.5 * dz, 1500., dz) * pc
-    plt.plot(zs / pc, pure_exponential(zs, pars[2:]) / kmpspMyr, "k-", alpha=0.75)
-    plt.plot(zs / pc, pure_sech(zs, pars[2:]) / kmpspMyr, "b-", alpha=0.75)
-    plt.savefig("sech.png")
+    plt.plot(zs / pc, exponential_acceleration(zs, pars) / kmpspMyr, "k-", alpha=0.75)
+    plt.plot(zs / pc, sech_squared_acceleration(zs, pars) / kmpspMyr, "b-", alpha=0.75)
+    plt.savefig("sech_squared.png")
 
 if False:
 
