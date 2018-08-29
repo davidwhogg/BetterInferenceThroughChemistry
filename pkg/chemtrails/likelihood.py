@@ -45,14 +45,13 @@ class Model:
         self.abundance_names = abundance_names
 
         # Convert data to units we expect
-        # TODO: audit this! might need vz in pc/Myr so energy units work!
-        self._z = self.usys.decompose(galcen.z).value
-        self._vz = self.usys.decompose(galcen.v_z).value
+        self._z = galcen.z.decompose(self.usys).value
+        self._vz = galcen.v_z.decompose(self.usys).value
 
         # Define a dummy potential object
         # HACK: hard-coded for now!
         self._potential = sech2_potential
-        self._G = self.usys.decompose(G).value
+        self._G = G.decompose(self.usys).value
 
         # Cache array used below
         self.metals_deg = int(metals_deg)
@@ -68,10 +67,10 @@ class Model:
 
     def ln_prior(self, par_dict):
 
-        if not -32 < par_dict['sun_z'] < 32: # pc
+        if not -64 < par_dict['sun_z'] < 64: # pc
             return -np.inf
 
-        if not -8 < par_dict['sun_vz'] < 8: # km/s
+        if not -8 < par_dict['sun_vz'] < 8: # pc/Myr
             return -np.inf
 
         if not np.log(16) < par_dict['lnsigma'] < np.log(256): # ln(Msun/pc^2)
@@ -107,13 +106,18 @@ class Model:
                                              (lnATA - np.log(priorvars)))
         return lndprior + summed_likelihood
 
-    def ln_likelihood(self, par_dict):
+    def get_energy(self, par_dict):
         z = self._z + par_dict['sun_z']
         vz = self._vz + par_dict['sun_vz']
 
         Sigma = np.exp(par_dict['lnsigma'])
         hz = np.exp(par_dict['lnhz'])
         Es = 0.5*vz**2 + self._potential(z, Sigma, hz, self._G)
+
+        return Es
+
+    def ln_likelihood(self, par_dict):
+        Es = self.get_energy(par_dict)
         invariants = Es - np.mean(Es)
 
         ln_l = 0.
