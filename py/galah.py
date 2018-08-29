@@ -53,8 +53,8 @@ def get_abundancenames(reference = "fe"):
                      #         3        8       12       19      30       39      56       63      
         abundances = ["fe_h", "li_fe", "o_fe", "mg_fe", "k_fe", "zn_fe", "y_fe", "ba_fe", "eu_fe", ]
     if reference == "o":
-                     #        12      13      14      20      26      28      39     63      
-        abundances = ["o_h", "mg_o", "al_o", "si_o", "ca_o", "fe_o", "ni_o", "y_o", "eu_o", ]
+                     #        3       12      19     26      30      39     56      63      
+        abundances = ["o_h", "li_o", "mg_o", "k_o", "fe_o", "zn_o", "y_o", "ba_o", "eu_o", ]
     abundancelabels = [get_label_from_abundancename(name) for name in abundances]
     return np.array(abundances), np.array(abundancelabels)
 
@@ -138,7 +138,8 @@ def plot_abundances(galah, kinematicdata, reference = "fe"):
         abundance = get_abundance_data(galah, aname)
         good = np.abs(abundance) < 2. # hack
         vmin, vmax = np.percentile(abundance[good], [5., 95.])
-        foo = ax[i].scatter(kinematicdata.vz, kinematicdata.z,
+        zs, vs = np.array(kinematicdata.z), np.array(kinematicdata.vz)
+        foo = ax[i].scatter(vs[good], zs[good],
                             marker=".", s=3000/np.sqrt(np.sum(good)),
                             c=abundance[good], vmin=vmin, vmax=vmax, alpha=0.3,
                             cmap=mpl.cm.plasma, rasterized=True)
@@ -225,8 +226,12 @@ if __name__ == "__main__":
     # make all slice plots
     if False:
         sunpars0 = np.array([0. * pc, 0. * km / s])
-        dynpars0 = np.array([64. * sigunits, 350. * pc])
+        dynpars0 = np.array([70. * sigunits, 350. * pc])
         metalnames = [l for l in galah.__dir__() if ("_fe" in l and l[:2] != "e_")]
+        metalnames += [l.split("_")[0]+"_o" for l in metalnames]
+        print(metalnames)
+        print("o_o" in metalnames)
+        metalnames.remove("o_o")
         metalnames.append("fe_h")
         for metalname in metalnames:
             metallabel = get_label_from_abundancename(metalname)
@@ -241,22 +246,26 @@ if __name__ == "__main__":
         hogg_savefig(fig, "galah_abundances_O.png")
 
     # sample and corner plot all, and then each individually
-    abundances, abundancelabels = get_abundancenames()
-    picklefn = "samples_{}.pkl".format("all")
+    reference = "o"
+    abundances, abundancelabels = get_abundancenames(reference=reference)
+    for abundance in abundances:
+        if abundance not in galah.__dir__():
+            galah.data[abundance] = get_abundance_data(galah, abundance) # STUPID HACK to make getattr() work
+    picklefn = "samples_all_{}.pkl".format(reference)
     if os.path.isfile(picklefn):
-        print("__main__: skipping {}".format("all"))
+        print("__main__: skipping all {}".format(reference))
     else:
         open(picklefn, "wb").close()
-        print("__main__: working on {}".format("all"))
+        print("__main__: working on all {}".format(reference))
         samples, fig = sample_and_plot(kinematicdata, galah, abundances)
-        hogg_savefig(fig, "corner_{}.png".format("all"))
+        hogg_savefig(fig, "corner_all_{}.png".format(reference))
         pickle_to_file(samples, picklefn)
     for abundance in abundances:
         picklefn = "samples_{}.pkl".format(abundance)
         if os.path.isfile(picklefn):
             print("__main__: skipping {}".format(abundance))
         else:
-            open(picklefn, "wb").close()
+            open(picklefn, "wb").close() # touch to lock
             print("__main__: working on {}".format(abundance))
             samples, fig = sample_and_plot(kinematicdata, galah, [abundance, ])
             hogg_savefig(fig, "corner_{}.png".format(abundance))
