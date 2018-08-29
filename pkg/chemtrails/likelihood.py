@@ -11,6 +11,7 @@ from scipy.special import logsumexp
 
 # This package
 from .potential import sech2_potential
+from .data import get_abundance_data
 
 __all__ = ['Model']
 
@@ -38,21 +39,16 @@ class Model:
             usys = UnitSystem(u.pc, u.Myr, u.Msun, u.radian, u.km/u.s)
         self.usys = usys
 
-        # GALAH abundances
-        self.element_data = element_data.data[abundance_names]
+        # GALAH data
+        self.galcen = galcen
+
+        # put requested abundances into a dictionary
+        self.element_data = dict()
+        for name in abundance_names:
+            self.element_data[name] = get_abundance_data(element_data, name)
         self.abundance_names = abundance_names
 
-        # TODO: this should really be done outside of the init, in the data
-        # loading...
-        mask = np.ones(len(self.element_data), dtype=bool)
-        for name in self.abundance_names:
-            mask &= (np.isfinite(self.element_data[name]) &
-                     (self.element_data[name] > -2) &
-                     (self.element_data[name] < 2))
-        self.element_data = self.element_data[mask]
-
         # Convert data to units we expect
-        galcen = galcen[mask]
         self._z = self.usys.decompose(galcen.z).value
         self._vz = self.usys.decompose(galcen.v_z).value
 
