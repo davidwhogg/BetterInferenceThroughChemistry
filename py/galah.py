@@ -50,8 +50,8 @@ def get_label_from_abundancename(name):
 
 def get_abundancenames(reference = "fe"):
     if reference == "fe":
-                     #         3        8       12       13       14       39      56       63      
-        abundances = ["fe_h", "li_fe", "o_fe", "mg_fe", "al_fe", "si_fe", "y_fe", "ba_fe", "eu_fe", ]
+                     #         3        8       12       19      30       39      56       63      
+        abundances = ["fe_h", "li_fe", "o_fe", "mg_fe", "k_fe", "zn_fe", "y_fe", "ba_fe", "eu_fe", ]
     if reference == "o":
                      #        12      13      14      20      26      28      39     63      
         abundances = ["o_h", "mg_o", "al_o", "si_o", "ca_o", "fe_o", "ni_o", "y_o", "eu_o", ]
@@ -156,7 +156,7 @@ def plot_lf_slices(galah, kinematicdata, sunpars0, dynpars0, metalname, metallab
     for k, units, name, scale in [
 #        (0, pc, "zsun", 80.),
 #        (1, km / s, "vsun", 4.),
-        (2, sigunits, "sigma", 15.),
+        (2, sigunits, "sigma", 35.),
 #        (3, pc, "scaleheight", 300.),
         ]:
         metals = get_abundance_data(galah, metalname)
@@ -171,7 +171,7 @@ def plot_lf_slices(galah, kinematicdata, sunpars0, dynpars0, metalname, metallab
             pars = dynpars
             i = k - 2
             recompute = True
-        parsis = pars[i] + np.arange(-1., 1.001, 0.05) * scale * units
+        parsis = pars[i] + np.arange(-1., 1.001, 0.025) * scale * units
         llfs = np.zeros_like(parsis)
         blob = None
         for j, parsi in enumerate(parsis):
@@ -222,10 +222,10 @@ if __name__ == "__main__":
     KinematicData = namedtuple("KinematicData", ["z", "vz"])
     kinematicdata = KinematicData(galcen.z.to(u.pc).value, galcen.v_z.to(u.km/u.s).value)
 
+    # make all slice plots
     if False:
-        # make all slice plots
         sunpars0 = np.array([0. * pc, 0. * km / s])
-        dynpars0 = np.array([64. * sigunits, 400. * pc])
+        dynpars0 = np.array([64. * sigunits, 350. * pc])
         metalnames = [l for l in galah.__dir__() if ("_fe" in l and l[:2] != "e_")]
         metalnames.append("fe_h")
         for metalname in metalnames:
