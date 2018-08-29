@@ -7,7 +7,11 @@ from pyia import GaiaData
 __all__ = ['load_nominal_galah', 'get_label_from_abundancename',
            'get_catalog_name', 'get_abundance_data']
 
-def load_nominal_galah(filename, zlim=2*u.kpc, vlim=75*u.km/u.s):
+def load_nominal_galah(filename,
+                       zlim=2*u.kpc, vlim=75*u.km/u.s,
+                       teff_lim=[4000., 6500]*u.K,
+                       logg_lim=[-0.5, 3.5],
+                       parallax_snr_lim=10):
     """TODO
 
     Parameters
@@ -26,11 +30,13 @@ def load_nominal_galah(filename, zlim=2*u.kpc, vlim=75*u.km/u.s):
     # read data and cut
     galah = GaiaData(filename)
     galah = galah[np.isfinite(galah.parallax_error)]
-    galah = galah[(galah.parallax / galah.parallax_error) > 10.]
-    galah = galah[(galah.teff > 4000*u.K) & (galah.teff < 6500*u.K)]
-    galah = galah[galah.logg < 3.5]
-    galah = galah[np.isfinite(galah.mg_fe)]
-    galah = galah[(galah.mg_fe > -2.) * (galah.mg_fe < 2.)]
+
+    if parallax_snr_lim is not None:
+        plx_snr = galah.parallax / galah.parallax_error
+        galah = galah[plx_snr > parallax_snr_lim]
+
+    galah = galah[(galah.teff > teff_lim[0]) & (galah.teff < teff_lim[1])]
+    galah = galah[(galah.logg > logg_lim[0]) & (galah.logg < logg_lim[1])]
 
     # make coordinates
     c = galah.get_skycoord(radial_velocity=galah.rv_synt)
