@@ -58,6 +58,7 @@ def ln_like(qs, invariants, order=3, residuals=False):
     foo, lnATA = np.linalg.slogdet(ATA)
     resid2sum = np.sum((qs - np.dot(A, x)) ** 2)
     nobj = len(qs)
+    print(nobj)
     summed_likelihood = -0.5 * logsumexp((resid2sum / priorvars + nobj * np.log(priorvars))
                                          + (lnATA - np.log(priorvars)))
     return lndprior + summed_likelihood
@@ -66,21 +67,21 @@ def ln_prior(pars):
     """
     such bad code
     """
-    if pars[0] < -20.:
+    if pars[0] < -100.:
         return -np.Inf
-    if pars[0] > 20.:
+    if pars[0] > 100.:
         return -np.Inf
-    if pars[1] < -5.:
+    if pars[1] < -6.:
         return -np.Inf
-    if pars[1] > 5.:
+    if pars[1] > 6.:
         return -np.Inf
-    if pars[2] < np.log(32.):
+    if pars[2] < np.log(30.):
         return -np.Inf
-    if pars[2] > np.log(128.):
+    if pars[2] > np.log(150.):
         return -np.Inf
-    if pars[3] < np.log(200.):
+    if pars[3] < np.log(100.):
         return -np.Inf
-    if pars[3] > np.log(600.):
+    if pars[3] > np.log(800.):
         return -np.Inf
     return 0.
 
@@ -138,9 +139,5 @@ def sample_and_plot(kinematicdata, elementdata, abundances):
                            labels=[r"$z_\mathrm{Sun}$ (pc)",
                                    r"$v_{z\mathrm{Sun}}$ (km/s)",
                                    r"$\ln\Sigma$",
-                                   r"$\ln h$", ],
-                           range=[[-20., 20.],
-                                  [-5., 5.],
-                                  [np.log(32.), np.log(128.)],
-                                  [np.log(200.), np.log(600.)], ])
+                                   r"$\ln h$", ])
     return chain, figure

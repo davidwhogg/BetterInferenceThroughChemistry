@@ -48,13 +48,16 @@ def get_label_from_abundancename(name):
     foo = name.split("_")
     return "["+foo[0].capitalize()+"/"+foo[1].capitalize()+"]"
 
-def get_abundancenames(reference = "fe"):
+def get_abundancenames(reference):
     if reference == "fe":
                      #         3        8       12       19      30       39      56       63      
         abundances = ["fe_h", "li_fe", "o_fe", "mg_fe", "k_fe", "zn_fe", "y_fe", "ba_fe", "eu_fe", ]
     if reference == "o":
                      #        3       12      19     26      30      39     56      63      
         abundances = ["o_h", "li_o", "mg_o", "k_o", "fe_o", "zn_o", "y_o", "ba_o", "eu_o", ]
+    if reference == "h":
+              #        3       12     19      26     28      30      39     56      63      
+        abundances = ["li_h", "o_h", "mg_h", "k_h", "fe_h", "zn_h", "y_h", "ba_h", "eu_h", ]
     abundancelabels = [get_label_from_abundancename(name) for name in abundances]
     return np.array(abundances), np.array(abundancelabels)
 
@@ -79,24 +82,24 @@ def get_abundance_data(galah, abundancename):
         print("get_abundance_data(): {} = {} - {}".format(abundancename, numerator + "_fe", denominator + "_fe"))
         return getattr(galah, numerator + "_fe") - getattr(galah, denominator + "_fe")
 
-def setup_abundance_plot_grid(reference = "fe"):
+def setup_abundance_plot_grid(reference):
     nx, ny = 3, 3
     fig, axes = plt.subplots(ny, nx, figsize=(nx * 4, ny * 4), sharex=True, sharey=True)
     axes = axes.flatten()
-    foo, alabels = get_abundancenames(reference = reference)
+    foo, alabels = get_abundancenames(reference)
     [ax.text(0.02, 0.98, label, ha="left", va="top", transform=ax.transAxes) for ax, label in zip(axes, alabels)]
     fig.tight_layout()
     return fig, axes, nx, ny
 
-def plot_samplings():
-    fig, ax, nx, ny = setup_abundance_plot_grid()
-    fig2, ax2, foo, bar = setup_abundance_plot_grid()
-    abundances, foo = get_abundancenames()
+def plot_samplings(reference):
+    fig, ax, nx, ny = setup_abundance_plot_grid(reference)
+    fig2, ax2, foo, bar = setup_abundance_plot_grid(reference)
+    abundances, foo = get_abundancenames(reference)
 
     color, alpha = "0.5", 0.3
     allcolor, allalpha = "k", 0.01
 
-    picklefn = "samples_{}.pkl".format("all")
+    picklefn = "samples_all_{}.pkl".format(reference)
     allsamples = unpickle_from_file(picklefn)
     allxs = np.exp(allsamples[:, 2])
     allys = np.exp(allsamples[:, 3])
@@ -124,21 +127,21 @@ def plot_samplings():
         if i % nx == 0:
             ax[i].set_ylabel(r"scaleheight $h$ [pc]")
             ax2[i].set_ylabel(r"sun's $z$ position [pc]")
-    ax[0].set_xlim(30., 120.)
-    ax[0].set_ylim(200., 600.)
-    ax2[0].set_xlim(-5., 5.)
-    ax2[0].set_ylim(-20., 20.)
+    ax[0].set_xlim(30., 150.)
+    ax[0].set_ylim(100., 800.)
+    ax2[0].set_xlim(-6., 6.)
+    ax2[0].set_ylim(-100., 100.)
     return fig, ax, fig2, ax2
 
-def plot_abundances(galah, kinematicdata, reference = "fe"):
-    fig, ax, nx, ny = setup_abundance_plot_grid(reference = reference)
-    abundances, foo = get_abundancenames(reference = reference)
+def plot_abundances(galah, kinematicdata, reference):
+    fig, ax, nx, ny = setup_abundance_plot_grid(reference)
+    abundances, foo = get_abundancenames(reference)
 
     for i, aname in enumerate(abundances):
         abundance = get_abundance_data(galah, aname)
         good = np.abs(abundance) < 2. # hack
         vmin, vmax = np.percentile(abundance[good], [5., 95.])
-        zs, vs = np.array(kinematicdata.z), np.array(kinematicdata.vz)
+        zs, vs = kinematicdata.z, kinematicdata.vz
         foo = ax[i].scatter(vs[good], zs[good],
                             marker=".", s=3000/np.sqrt(np.sum(good)),
                             c=abundance[good], vmin=vmin, vmax=vmax, alpha=0.3,
@@ -147,8 +150,8 @@ def plot_abundances(galah, kinematicdata, reference = "fe"):
             ax[i].set_xlabel("$v_z$ [km/s]")
         if i % nx == 0:
             ax[i].set_ylabel("$z$ [pc]")
-    ax[0].set_xlim(-75., 75.)
-    ax[0].set_ylim(-2000., 2000.)
+    ax[0].set_xlim(-40., 40.)
+    ax[0].set_ylim(-1000., 1000.)
     return fig, ax
 
 def plot_lf_slices(galah, kinematicdata, sunpars0, dynpars0, metalname, metallabel):
@@ -192,11 +195,8 @@ def plot_lf_slices(galah, kinematicdata, sunpars0, dynpars0, metalname, metallab
         plt.title(metallabel)
         hogg_savefig(plt, "lf_{}_{}_test.png".format(name, metalname))
 
-if __name__ == "__main__":
-    plt.rc('text', usetex=True)
-
-    # read data and cut
-    print("__main__: reading and cutting galah data")
+def read_and_cut_data():
+    print("read_and_cut_data(): reading and cutting galah data")
     galah = GaiaData('../data/GALAH-GaiaDR2-xmatch.fits.gz')
     galah = galah[np.isfinite(galah.parallax_error)]
     galah = galah[(galah.parallax / galah.parallax_error) > 10.]
@@ -206,18 +206,22 @@ if __name__ == "__main__":
     galah = galah[(galah.mg_fe > -2.) * (galah.mg_fe < 2.)]
 
     # make coordinates
-    print("__main__: dealing with coordinates")
+    print("read_and_cut_data(): dealing with coordinates")
     c = galah.get_skycoord(radial_velocity=galah.rv_synt)
     galcen = c.transform_to(coord.Galactocentric(z_sun=0*u.pc))
     zs = galcen.z.to(u.pc).value
     vs = galcen.v_z.to(u.km/u.s).value
 
     # trim on coordinates
-    zlim = 2000. # pc
-    vlim =   75. # km / s
+    zlim = 1000. # pc
+    vlim =   40. # km / s
     inbox = (zs / zlim) ** 2 + (vs / vlim) ** 2 < 1.
-    galah = galah[inbox]
-    galcen = galcen[inbox]
+    return galah[inbox], galcen[inbox]
+
+if __name__ == "__main__":
+    plt.rc('text', usetex=True)
+    galah, galcen = read_and_cut_data()
+    reference = "h"
 
     # make kinematic-data object for `chemical_tangents.py`
     KinematicData = namedtuple("KinematicData", ["z", "vz"])
@@ -226,28 +230,21 @@ if __name__ == "__main__":
     # make all slice plots
     if False:
         sunpars0 = np.array([0. * pc, 0. * km / s])
-        dynpars0 = np.array([70. * sigunits, 350. * pc])
+        dynpars0 = np.array([90. * sigunits, 150. * pc])
         metalnames = [l for l in galah.__dir__() if ("_fe" in l and l[:2] != "e_")]
-        metalnames += [l.split("_")[0]+"_o" for l in metalnames]
-        print(metalnames)
-        print("o_o" in metalnames)
-        metalnames.remove("o_o")
-        metalnames.append("fe_h")
+        metalnames += [l.split("_")[0]+"_h" for l in metalnames]
+        metalnames = ["fe_h", ] + metalnames
         for metalname in metalnames:
             metallabel = get_label_from_abundancename(metalname)
             plot_lf_slices(galah, kinematicdata, sunpars0, dynpars0, metalname, metallabel)
 
     # make abundance plots
-    if False:
-        fig, ax = plot_abundances(galah, kinematicdata)
-        hogg_savefig(fig, "galah_abundances.png")
-    if False:
-        fig, ax = plot_abundances(galah, kinematicdata, reference="o")
-        hogg_savefig(fig, "galah_abundances_O.png")
+    if True:
+        fig, ax = plot_abundances(galah, kinematicdata, reference)
+        hogg_savefig(fig, "galah_abundances_{}.png".format(reference))
 
     # sample and corner plot all, and then each individually
-    reference = "o"
-    abundances, abundancelabels = get_abundancenames(reference=reference)
+    abundances, abundancelabels = get_abundancenames(reference)
     for abundance in abundances:
         if abundance not in galah.__dir__():
             galah.data[abundance] = get_abundance_data(galah, abundance) # STUPID HACK to make getattr() work
@@ -272,29 +269,8 @@ if __name__ == "__main__":
             pickle_to_file(samples, picklefn)
 
     if True:
-        fig, ax, fig2, ax2 = plot_samplings()
-        hogg_savefig(fig, "dynpars_samplings.png")
-        hogg_savefig(fig2, "sunpars_samplings.png")
+        fig, ax, fig2, ax2 = plot_samplings(reference)
+        hogg_savefig(fig, "dynpars_samplings_{}.png".format(reference))
+        hogg_savefig(fig2, "sunpars_samplings_{}.png".format(reference))
         plt.close(fig)
         plt.close(fig2)
-
-    # plot various things for some standard potential
-    if False:
-        Jzs, phis, blob = paint_actions_angles(zs, vs, sunpars0, dynpars0)
-        plt.clf()
-        plt.scatter(vs / (km / s), zs / (pc), c=np.log(Jzs / (pc * km / s)), s=2)
-        plt.colorbar()
-        hogg_savefig(plt, "deleteme_galah0.png")
-        plt.clf()
-        plt.scatter(vs / (km / s), zs / (pc), c=(phis * 180. / np.pi), s=2)
-        plt.colorbar()
-        hogg_savefig(plt, "deleteme_galah3.png")
-
-    if False:
-        plt.clf()
-        plt.plot(Jzs + 2. * np.random.uniform(-1, 1, size=len(Jzs)), galah.mg_fe, "k.", alpha=0.25)
-        plotx = np.array([0., 76.])
-        plt.plot(plotx, 0. + 0.004 * plotx, "r-", zorder=10)
-        plt.xlabel(r"$v_\mathrm{max}$ (km / s)")
-        plt.ylabel("{} (dex)".format(metallabel))
-        hogg_savefig(plt, "slope.png")
