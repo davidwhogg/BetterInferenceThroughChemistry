@@ -41,19 +41,19 @@ class Sech2Potential(PotentialBase):
                                              ndim=1)
 
     def _energy(self, q, t=0.):
-        return sech2_potential(q[0],
+        return sech2_potential(q[:, 0],
                                self.parameters['Sigma'].value,
                                self.parameters['hz'].value,
                                self.G)
 
     def _gradient(self, q, t=0.):
-        return sech2_gradient(q[0],
+        return sech2_gradient(q[:, 0],
                               self.parameters['Sigma'].value,
                               self.parameters['hz'].value,
                               self.G)
 
     def _density(self, q, t=0.):
-        return sech2_density(q[0],
+        return sech2_density(q[:, 0],
                              self.parameters['Sigma'].value,
                              self.parameters['hz'].value,
                              self.G)
@@ -86,16 +86,16 @@ class UniformPotential(PotentialBase):
                                                ndim=1)
 
     def _energy(self, q, t=0.):
-        return uniform_potential(q[0],
+        return uniform_potential(q[:, 0],
                                  self.parameters['rho0'].value,
                                  self.G)
 
     def _gradient(self, q, t=0.):
-        return uniform_gradient(q[0],
+        return uniform_gradient(q[:, 0],
                                 self.parameters['rho0'].value,
                                 self.G)
 
     def _density(self, q, t=0.):
-        return uniform_density(q[0],
+        return uniform_density(q[:, 0],
                                self.parameters['rho0'].value,
                                self.G)
