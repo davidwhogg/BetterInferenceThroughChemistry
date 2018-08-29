@@ -19,8 +19,8 @@ def sech2_potential(z, sigma, hz, G):
 def sech2_gradient(z, sigma, hz, G):
     return 2*pi*G * sigma * np.tanh(0.5 * z / hz)
 
-def sech2_density(z, sigma, hz, G):
-    return sigma / (4 * hz) * np.sech(0.5 * z / hz)
+def sech2_density(z, sigma, hz):
+    return sigma / (4 * hz) / np.cosh(0.5 * z / hz)**2
 
 class Sech2Potential(PotentialBase):
 
@@ -55,8 +55,7 @@ class Sech2Potential(PotentialBase):
     def _density(self, q, t=0.):
         return sech2_density(q[:, 0],
                              self.parameters['Sigma'].value,
-                             self.parameters['hz'].value,
-                             self.G)
+                             self.parameters['hz'].value)
 
 
 # ------------------------------------------------------------------------------
@@ -67,7 +66,7 @@ def uniform_potential(z, rho0, G):
 def uniform_gradient(z, rho0, G):
     return 4*pi*G * rho0 * z
 
-def uniform_density(z, rho0, G):
+def uniform_density(z, rho0):
     return rho0
 
 class UniformPotential(PotentialBase):
@@ -97,5 +96,4 @@ class UniformPotential(PotentialBase):
 
     def _density(self, q, t=0.):
         return uniform_density(q[:, 0],
-                               self.parameters['rho0'].value,
-                               self.G)
+                               self.parameters['rho0'].value)

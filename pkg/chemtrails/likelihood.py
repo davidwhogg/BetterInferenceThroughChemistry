@@ -45,6 +45,7 @@ class Model:
         self.abundance_names = abundance_names
 
         # Convert data to units we expect
+        # TODO: audit this! might need vz in pc/Myr so energy units work!
         self._z = self.usys.decompose(galcen.z).value
         self._vz = self.usys.decompose(galcen.v_z).value
 
