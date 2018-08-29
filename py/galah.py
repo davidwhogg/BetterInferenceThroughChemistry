@@ -50,8 +50,8 @@ def get_label_from_abundancename(name):
 
 def get_abundancenames(reference = "fe"):
     if reference == "fe":
-                     #         8       12       13       14       20       28       39      63      
-        abundances = ["fe_h", "o_fe", "mg_fe", "al_fe", "si_fe", "ca_fe", "ni_fe", "y_fe", "eu_fe", ]
+                     #         3        8       12       13       14       39      56       63      
+        abundances = ["fe_h", "li_fe", "o_fe", "mg_fe", "al_fe", "si_fe", "y_fe", "ba_fe", "eu_fe", ]
     if reference == "o":
                      #        12      13      14      20      26      28      39     63      
         abundances = ["o_h", "mg_o", "al_o", "si_o", "ca_o", "fe_o", "ni_o", "y_o", "eu_o", ]
