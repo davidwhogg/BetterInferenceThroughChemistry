@@ -118,13 +118,14 @@ def sample(kinematicdata, elementdata, abundances):
     - all integers hard-coded
     """
     p0 = np.array([0., 0., np.log(65.), np.log(400.), ])
+    nburn = 512
     nsteps = 512
     nwalkers = 64
     ndim = len(p0)
     p0 = p0[None, :] + 0.01 * np.random.normal(size = (nwalkers, ndim))
     sampler = emcee.EnsembleSampler(nwalkers, ndim, ln_post, args=[kinematicdata, elementdata, abundances])
     print("sample(): starting burn-in")
-    pos, prob, state = sampler.run_mcmc(p0, nsteps)
+    pos, prob, state = sampler.run_mcmc(p0, nburn)
     sampler.reset()
     print("sample(): starting proper run")
     sampler.run_mcmc(pos, nsteps)

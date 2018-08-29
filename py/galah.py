@@ -222,12 +222,10 @@ if __name__ == "__main__":
     KinematicData = namedtuple("KinematicData", ["z", "vz"])
     kinematicdata = KinematicData(galcen.z.to(u.pc).value, galcen.v_z.to(u.km/u.s).value)
 
-    if True:
-        # set fiducial parameters
+    if False:
+        # make all slice plots
         sunpars0 = np.array([0. * pc, 0. * km / s])
         dynpars0 = np.array([64. * sigunits, 400. * pc])
-
-        # make all slice plots
         metalnames = [l for l in galah.__dir__() if ("_fe" in l and l[:2] != "e_")]
         metalnames.append("fe_h")
         for metalname in metalnames:
