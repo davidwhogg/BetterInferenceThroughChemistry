@@ -1,7 +1,3 @@
-# standard library
-from os import path
-import sys
-
 # Third-party
 import astropy.units as u
 from astropy.constants import G
