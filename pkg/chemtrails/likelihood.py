@@ -35,7 +35,7 @@ class Model:
             usys = UnitSystem(u.pc, u.Myr, u.Msun, u.radian, u.km/u.s)
         self.usys = usys
 
-        # GALAH data
+        # kinematic and abundance data
         self.galcen = galcen
 
         # put requested abundances into a dictionary
