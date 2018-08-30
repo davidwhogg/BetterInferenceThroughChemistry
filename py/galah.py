@@ -27,6 +27,15 @@ from pyia import GaiaData
 from integrate_orbits import *
 from chemical_tangents import *
 
+from os import path
+import sys
+_pwd = path.split(path.abspath(__file__))[0]
+_path = path.abspath(path.join(_pwd, '..', 'pkg'))
+if _path not in sys.path:
+    sys.path.append(_path)
+from chemtrails.data import (get_label_from_abundancename, get_abundance_data,
+                             load_nominal_galah)
+
 def pickle_to_file(thing, name):
     print("pickle_to_file(): writing {}".format(name))
     outfile = open(name, "wb")
@@ -44,43 +53,18 @@ def hogg_savefig(thing, name):
     print("hogg_savefig(): saving figure {}".format(name))
     return thing.savefig(name)
 
-def get_label_from_abundancename(name):
-    foo = name.split("_")
-    return "["+foo[0].capitalize()+"/"+foo[1].capitalize()+"]"
-
 def get_abundancenames(reference):
     if reference == "fe":
-                     #         3        8       12       19      30       39      56       63      
+                     #         3        8       12       19      30       39      56       63
         abundances = ["fe_h", "li_fe", "o_fe", "mg_fe", "k_fe", "zn_fe", "y_fe", "ba_fe", "eu_fe", ]
     if reference == "o":
-                     #        3       12      19     26      30      39     56      63      
+                     #        3       12      19     26      30      39     56      63
         abundances = ["o_h", "li_o", "mg_o", "k_o", "fe_o", "zn_o", "y_o", "ba_o", "eu_o", ]
     if reference == "h":
-              #        3       12     19      26     28      30      39     56      63      
+              #        3       12     19      26     28      30      39     56      63
         abundances = ["li_h", "o_h", "mg_h", "k_h", "fe_h", "zn_h", "y_h", "ba_h", "eu_h", ]
     abundancelabels = [get_label_from_abundancename(name) for name in abundances]
     return np.array(abundances), np.array(abundancelabels)
-
-def get_abundance_data(galah, abundancename):
-    """
-    Check this spaghetti code!
-    """
-    if abundancename == "fe_h":
-        print("get_abundance_data(): {} = fe_h".format(abundancename))
-        return getattr(galah, "fe_h")
-    numerator, denominator = abundancename.split("_")
-    if denominator == "fe":
-        print("get_abundance_data(): {} = {}".format(abundancename, abundancename))
-        return getattr(galah, abundancename)
-    if numerator == "fe":
-        print("get_abundance_data(): {} = 0. - {}".format(abundancename, denominator + "_" + numerator))
-        return 0. - getattr(galah, denominator + "_" + numerator)
-    if denominator == "h":
-        print("get_abundance_data(): {} = {} + fe_h".format(abundancename, numerator + "_fe"))
-        return getattr(galah, numerator + "_fe") + getattr(galah, "fe_h")
-    else:
-        print("get_abundance_data(): {} = {} - {}".format(abundancename, numerator + "_fe", denominator + "_fe"))
-        return getattr(galah, numerator + "_fe") - getattr(galah, denominator + "_fe")
 
 def setup_abundance_plot_grid(reference):
     nx, ny = 3, 3
@@ -195,32 +179,11 @@ def plot_lf_slices(galah, kinematicdata, sunpars0, dynpars0, metalname, metallab
         plt.title(metallabel)
         hogg_savefig(plt, "lf_{}_{}_test.png".format(name, metalname))
 
-def read_and_cut_data():
-    print("read_and_cut_data(): reading and cutting galah data")
-    galah = GaiaData('../data/GALAH-GaiaDR2-xmatch.fits.gz')
-    galah = galah[np.isfinite(galah.parallax_error)]
-    galah = galah[(galah.parallax / galah.parallax_error) > 10.]
-    galah = galah[(galah.teff > 4000*u.K) & (galah.teff < 6500*u.K)]
-    galah = galah[galah.logg < 3.5]
-    galah = galah[np.isfinite(galah.mg_fe)]
-    galah = galah[(galah.mg_fe > -2.) * (galah.mg_fe < 2.)]
-
-    # make coordinates
-    print("read_and_cut_data(): dealing with coordinates")
-    c = galah.get_skycoord(radial_velocity=galah.rv_synt)
-    galcen = c.transform_to(coord.Galactocentric(z_sun=0*u.pc))
-    zs = galcen.z.to(u.pc).value
-    vs = galcen.v_z.to(u.km/u.s).value
-
-    # trim on coordinates
-    zlim = 1000. # pc
-    vlim =   40. # km / s
-    inbox = (zs / zlim) ** 2 + (vs / vlim) ** 2 < 1.
-    return galah[inbox], galcen[inbox]
-
 if __name__ == "__main__":
     plt.rc('text', usetex=True)
-    galah, galcen = read_and_cut_data()
+    galah, galcen = load_nominal_galah('../data/GALAH-GaiaDR2-xmatch.fits.gz',
+                                       zlim=1*u.kpc,
+                                       vlim=40*u.km/u.s)
     reference = "h"
 
     # make kinematic-data object for `chemical_tangents.py`
