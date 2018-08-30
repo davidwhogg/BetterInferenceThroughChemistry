@@ -181,6 +181,7 @@ def plot_lf_slices(galah, kinematicdata, sunpars0, dynpars0, metalname, metallab
 
 if __name__ == "__main__":
     plt.rc('text', usetex=True)
+    print("reading and cutting galah data")
     galah, galcen = load_nominal_galah('../data/GALAH-GaiaDR2-xmatch.fits.gz',
                                        zlim=1*u.kpc,
                                        vlim=40*u.km/u.s)
