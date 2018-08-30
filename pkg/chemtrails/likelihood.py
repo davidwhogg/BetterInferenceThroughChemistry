@@ -94,10 +94,6 @@ class Model:
         ATA = np.dot(AT, A)
         x = np.linalg.solve(ATA, np.dot(AT, qs))
 
-        # TODO: re-enable this
-        # if residuals:
-        #     return qs - np.dot(A, x)
-
         _, lnATA = np.linalg.slogdet(ATA)
         resid2sum = np.sum((qs - np.dot(A, x)) ** 2)
 
