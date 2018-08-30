@@ -48,8 +48,7 @@ class Model:
         self._z = galcen.z.decompose(self.usys).value
         self._vz = galcen.v_z.decompose(self.usys).value
 
-        # Define a dummy potential object
-        # HACK: hard-coded for now!
+        # TODO HACK: hard-coded for now!
         self._potential = sech2_potential
         self._G = G.decompose(self.usys).value
 
@@ -67,10 +66,10 @@ class Model:
 
     def ln_prior(self, par_dict):
 
-        if not -64 < par_dict['sun_z'] < 64: # pc
+        if not -128 < par_dict['sun_z'] < 128: # pc
             return -np.inf
 
-        if not -8 < par_dict['sun_vz'] < 8: # pc/Myr
+        if not -32 < par_dict['sun_vz'] < 32: # pc/Myr
             return -np.inf
 
         if not np.log(16) < par_dict['lnsigma'] < np.log(256): # ln(Msun/pc^2)
