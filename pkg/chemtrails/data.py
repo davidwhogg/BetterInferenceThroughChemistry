@@ -4,7 +4,8 @@ import astropy.units as u
 import numpy as np
 from pyia import GaiaData
 
-__all__ = ['load_nominal_galah', 'get_label_from_abundancename',
+__all__ = ['load_nominal_galah', 'load_nominal_apogee',
+           'get_label_from_abundancename',
            'get_catalog_name', 'get_abundance_data']
 
 def load_nominal_galah(filename,
@@ -53,6 +54,39 @@ def load_nominal_galah(filename,
     return galah, galcen
 
 
+def load_nominal_apogee(filename,
+                        zlim=2*u.kpc, vlim=75*u.km/u.s,
+                        teff_lim=[4000., 6500]*u.K,
+                        logg_lim=[-0.5, 3.5],
+                        parallax_snr_lim=10):
+    """TODO: duplicated code!"""
+
+    # read data and cut
+    g = GaiaData(filename)
+    g = g[np.isfinite(g.parallax_error) & (g.parallax > 0.*u.mas)]
+
+    if parallax_snr_lim is not None:
+        plx_snr = g.parallax / g.parallax_error
+        g = g[plx_snr > parallax_snr_lim]
+
+    g = g[(g.TEFF > teff_lim[0].value) & (g.TEFF < teff_lim[1].value)]
+    g = g[(g.LOGG > logg_lim[0]) & (g.LOGG < logg_lim[1])]
+
+    # make coordinates
+    c = g.get_skycoord(radial_velocity=g.VHELIO_AVG * u.km/u.s)
+    galcen = c.transform_to(coord.Galactocentric(z_sun=0*u.pc))
+
+    zs = galcen.z.to(u.pc)
+    vs = galcen.v_z.to(u.km/u.s)
+
+    # trim on coordinates
+    inbox = (zs / zlim) ** 2 + (vs / vlim) ** 2 < 1.
+    g = g[inbox]
+    galcen = galcen[inbox]
+
+    return g, galcen
+
+
 def get_label_from_abundancename(name):
     """Given a name from a spectroscopic catalog (e.g., fe_h), return a label
     like [Fe/H].
@@ -83,9 +117,10 @@ def get_catalog_name(data, name):
     """
 
     name = name.lower()
-    lower_names = np.array([x.lower() for x in data.__dir__()])
+    cat_names = np.array(data.__dir__())
+    lower_names = np.array([x.lower() for x in cat_names])
     try:
-        return lower_names[lower_names == name][0]
+        return cat_names[lower_names == name][0]
     except IndexError:
         return None
 

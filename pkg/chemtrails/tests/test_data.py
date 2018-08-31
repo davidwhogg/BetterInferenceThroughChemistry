@@ -8,11 +8,15 @@ import pytest
 from pyia import GaiaData
 
 # This package
-from ..data import (load_nominal_galah, get_label_from_abundancename,
+from ..data import (load_nominal_galah, load_nominal_apogee,
+                    get_label_from_abundancename,
                     get_catalog_name, get_abundance_data)
 
 galah_path = os.path.join(os.path.split(os.path.abspath(__file__))[0],
                           'galah-small.fits')
+apogee_path = os.path.join(os.path.split(os.path.abspath(__file__))[0],
+                           'apogee-small.fits')
+
 def test_load_galah():
     data, galcen = load_nominal_galah(galah_path, parallax_snr_lim=None)
 
@@ -59,8 +63,14 @@ def test_get_catalog_name():
     name = get_catalog_name(data, 'ba_ba')
     assert name is None
 
-    # TODO: test APOGEE
+    # APOGEE
+    data, galcen = load_nominal_apogee(apogee_path)
 
+    name = get_catalog_name(data, 'fe_h')
+    assert name == 'FE_H'
+
+    name = get_catalog_name(data, 'FE_H')
+    assert name == 'FE_H'
 
 def test_get_abundance_data():
     # GALAH
