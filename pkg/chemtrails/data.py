@@ -147,7 +147,7 @@ def get_abundance_data(data, name):
     X, Y = low_name.split("_")
 
     # short-circuit if we just want [Fe/H], or an element [X/Fe]
-    if low_name == 'fe_h' or Y == 'fe':
+    if low_name == 'fe_h' or Y == 'fe' or Y == 'm':
         cat_name = get_catalog_name(data, low_name)
         return np.array(getattr(data, cat_name))
 
