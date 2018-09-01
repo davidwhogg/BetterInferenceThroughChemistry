@@ -21,8 +21,18 @@ import emcee
 import corner
 from integrate_orbits import *
 
-def ln_like(qs, invariants, order=3):
+def ln_like(qs, invariants, order=3, residuals=False):
     """
+    inputs:
+    - `qs`: a set of scalar abundnaces for a set of stars
+    - `invariants`: a set of dynamical invariants (one component, like Jz) for the same stars
+    - `order` (default 3): order of the polynomial model for the abundance mean
+    - `residuals` (default False): return residuals instead of the likelihood
+    
+    output:
+    - The fully marginalized log likelihood.
+    - OR, `if residuals`, the residuals away from the mean prediction (for visualization purposes)
+
     comments:
     - This function has a `posteriorlnvar` addition that approximates
       the relevant marginalization over the `order+1` linear
@@ -35,7 +45,7 @@ def ln_like(qs, invariants, order=3):
     - possible sign issue with posteriorlnvar
     - can't compare values taken at different orders bc priors not
       proper
-    - formulae needs checking; lots of 0.5s and signs and so on
+    - FORMULAE NEED CHECKING: lots of 0.5s and signs and so on
     """
     priorvars = np.exp(np.arange(np.log(0.02), np.log(0.25), np.log(1.01)))
     lndprior = -1. * np.log(len(priorvars))
@@ -43,9 +53,12 @@ def ln_like(qs, invariants, order=3):
     A = AT.T
     ATA = np.dot(AT, A)
     x = np.linalg.solve(ATA, np.dot(AT, qs))
+    if residuals:
+        return qs - np.dot(A, x)
     foo, lnATA = np.linalg.slogdet(ATA)
+    resid2sum = np.sum((qs - np.dot(A, x)) ** 2)
     nobj = len(qs)
-    resid2sum = np.sum(qs - np.dot(A, x) ** 2)
+    print(nobj)
     summed_likelihood = -0.5 * logsumexp((resid2sum / priorvars + nobj * np.log(priorvars))
                                          + (lnATA - np.log(priorvars)))
     return lndprior + summed_likelihood
@@ -54,21 +67,21 @@ def ln_prior(pars):
     """
     such bad code
     """
-    if pars[0] < -20.:
+    if pars[0] < -100.:
         return -np.Inf
-    if pars[0] > 20.:
+    if pars[0] > 100.:
         return -np.Inf
-    if pars[1] < -5.:
+    if pars[1] < -6.:
         return -np.Inf
-    if pars[1] > 5.:
+    if pars[1] > 6.:
         return -np.Inf
-    if pars[2] < np.log(32.):
+    if pars[2] < np.log(30.):
         return -np.Inf
-    if pars[2] > np.log(128.):
+    if pars[2] > np.log(150.):
         return -np.Inf
-    if pars[3] < np.log(200.):
+    if pars[3] < np.log(100.):
         return -np.Inf
-    if pars[3] > np.log(600.):
+    if pars[3] > np.log(800.):
         return -np.Inf
     return 0.
 
@@ -79,7 +92,7 @@ def ln_post(pars, kinematicdata, elementdata, abundances):
       the data, extracts the relevant abundances, and computes the
       posterior on everything.
     - Assumes that the `kinematicdata` input has various methods
-      defined.
+      defined that return z in pc and vz in km / s
     - Note the `exp()` on the `dynpars`.
     """
     ln_p = ln_prior(pars)
@@ -87,10 +100,10 @@ def ln_post(pars, kinematicdata, elementdata, abundances):
         return -np.Inf
     sunpars = np.array([pars[0] * pc, pars[1] * km / s]) # units insanity
     dynpars = np.array([np.exp(pars[2]) * sigunits, np.exp(pars[3]) * pc]) # units insanity
-    zs = kinematicdata.z.to(u.pc).value * pc # units insanity
-    vs = kinematicdata.v_z.to(u.km/u.s).value * km / s # units insanity
-    Jzs, phis, blob = paint_actions_angles(zs, vs, sunpars, dynpars)
-    invariants = Jzs - np.mean(Jzs)
+    zs = kinematicdata.z * pc
+    vs = kinematicdata.vz * km / s
+    Es = paint_energies(zs, vs, sunpars, dynpars)
+    invariants = Es - np.mean(Es)
     ln_l = 0.
     for abundance in abundances:
         metals = getattr(elementdata, abundance)
@@ -106,13 +119,14 @@ def sample(kinematicdata, elementdata, abundances):
     - all integers hard-coded
     """
     p0 = np.array([0., 0., np.log(65.), np.log(400.), ])
-    nsteps = 256
-    nwalkers = 32
+    nburn = 512
+    nsteps = 512
+    nwalkers = 64
     ndim = len(p0)
     p0 = p0[None, :] + 0.01 * np.random.normal(size = (nwalkers, ndim))
     sampler = emcee.EnsembleSampler(nwalkers, ndim, ln_post, args=[kinematicdata, elementdata, abundances])
     print("sample(): starting burn-in")
-    pos, prob, state = sampler.run_mcmc(p0, nsteps / 2) # burn in
+    pos, prob, state = sampler.run_mcmc(p0, nburn)
     sampler.reset()
     print("sample(): starting proper run")
     sampler.run_mcmc(pos, nsteps)
@@ -125,9 +139,5 @@ def sample_and_plot(kinematicdata, elementdata, abundances):
                            labels=[r"$z_\mathrm{Sun}$ (pc)",
                                    r"$v_{z\mathrm{Sun}}$ (km/s)",
                                    r"$\ln\Sigma$",
-                                   r"$\ln h$", ],
-                           range=[[-20., 20.],
-                                  [-5., 5.],
-                                  [np.log(32.), np.log(128.)],
-                                  [np.log(200.), np.log(600.)], ])
+                                   r"$\ln h$", ])
     return chain, figure
