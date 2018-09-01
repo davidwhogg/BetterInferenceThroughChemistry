@@ -58,7 +58,6 @@ def ln_like(qs, invariants, order=3, residuals=False):
     foo, lnATA = np.linalg.slogdet(ATA)
     resid2sum = np.sum((qs - np.dot(A, x)) ** 2)
     nobj = len(qs)
-    print(nobj)
     summed_likelihood = -0.5 * logsumexp((resid2sum / priorvars + nobj * np.log(priorvars))
                                          + (lnATA - np.log(priorvars)))
     return lndprior + summed_likelihood
