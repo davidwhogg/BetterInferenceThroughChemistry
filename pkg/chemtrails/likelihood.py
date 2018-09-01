@@ -11,10 +11,15 @@ from .data import get_abundance_data
 
 __all__ = ['Model']
 
+def ln_normal(x, mu, var):
+    return -0.5 * (np.log(2*np.pi * var) + (x-mu)**2 / var)
+
+
 class Model:
 
     def __init__(self, galcen, element_data, abundance_names,
-                 metals_deg=3, usys=None):
+                 metals_deg=3, usys=None, enforce_finite=True,
+                 marginalize=True):
         """TODO
 
         Parameters
@@ -35,6 +40,8 @@ class Model:
             usys = UnitSystem(u.pc, u.Myr, u.Msun, u.radian, u.km/u.s)
         self.usys = usys
 
+        self.marginalize = marginalize
+
         # kinematic and abundance data
         self.galcen = galcen
 
@@ -44,9 +51,18 @@ class Model:
             self.element_data[name] = get_abundance_data(element_data, name)
         self.abundance_names = abundance_names
 
+        if enforce_finite:
+            elem_mask = np.ones(len(galcen), dtype=bool)
+            for name in abundance_names:
+                elem_mask &= np.isfinite(self.element_data[name])
+
+            for name in abundance_names:
+                self.element_data[name] = self.element_data[name][elem_mask]
+            self.galcen = self.galcen[elem_mask]
+
         # Convert data to units we expect
-        self._z = galcen.z.decompose(self.usys).value
-        self._vz = galcen.v_z.decompose(self.usys).value
+        self._z = self.galcen.z.decompose(self.usys).value
+        self._vz = self.galcen.v_z.decompose(self.usys).value
 
         # TODO HACK: hard-coded for now!
         self._potential = sech2_potential
@@ -54,7 +70,7 @@ class Model:
 
         # Cache array used below
         self.metals_deg = int(metals_deg)
-        self._AT = np.ones((self.metals_deg+1, len(galcen)))
+        self._AT = np.ones((self.metals_deg+1, len(self.galcen)))
 
     def unpack_pars(self, p):
         par_dict = dict()
@@ -62,9 +78,26 @@ class Model:
         par_dict['sun_vz'] = p[1]
         par_dict['lnsigma'] = p[2]
         par_dict['lnhz'] = p[3]
+
+        if not self.marginalize:
+            p_i = 4 # next index after p[3], see above
+            par_dict['alpha'] = dict()
+            par_dict['lnvar'] = dict()
+            for k, name in enumerate(self.abundance_names):
+                lnvar = p[p_i]
+                p_i += 1
+
+                alpha = p[p_i:p_i+self.metals_deg+1]
+                p_i += self.metals_deg+1
+
+                par_dict['lnvar'][name] = lnvar
+                par_dict['alpha'][name] = alpha
+
         return par_dict
 
     def ln_prior(self, par_dict):
+
+        lp = 0.
 
         if not -128 < par_dict['sun_z'] < 128: # pc
             return -np.inf
@@ -78,28 +111,51 @@ class Model:
         if not np.log(32) < par_dict['lnhz'] < np.log(1024): # ln(pc)
             return -np.inf
 
-        return 0.
+        if not self.marginalize:
+            for abundance_name in self.abundance_names:
+                # TODO: prior on alpha??
+                # alpha = par_dict['alpha'][abundance_name]
+                lnvar = par_dict['lnvar'][abundance_name]
 
-    def ln_metal_likelihood(self, qs, invariants):
-        # TODO: hard-coded
-        priorvars = np.exp(np.arange(np.log(0.02), np.log(0.25), np.log(1.01)))
-        lndprior = -np.log(len(priorvars))
+                if not 2*np.log(0.04) < lnvar < 2*np.log(0.5):
+                    return -np.inf
 
+        return lp
+
+    def get_residual(self, X_Ys, invariants):
         for k in range(1, self.metals_deg+1):
             self._AT[k] = self._AT[k-1] * invariants
 
         AT = self._AT
         A = AT.T
         ATA = np.dot(AT, A)
-        x = np.linalg.solve(ATA, np.dot(AT, qs))
+        x = np.linalg.solve(ATA, np.dot(AT, X_Ys))
 
+        resid = X_Ys - np.dot(A, x)
+
+        return resid, ATA
+
+    def ln_metal_marginal_likelihood(self, X_Ys, invariants):
+        # TODO: hard-coded
+        # priorvars = np.exp(np.arange(np.log(0.02),
+        #                                np.log(0.25),
+        #                                np.log(1.01)))
+        priorvars = np.logspace(np.log10(0.1**2), np.log10(0.5**2), 1024)
+        lndprior = -np.log(len(priorvars))
+
+        resid, ATA = self.get_residual(X_Ys, invariants)
         _, lnATA = np.linalg.slogdet(ATA)
-        resid2sum = np.sum((qs - np.dot(A, x)) ** 2)
+        resid2sum = np.sum(resid**2)
 
-        nobj = len(qs)
+        nobj = len(X_Ys)
         summed_likelihood = -0.5 * logsumexp((resid2sum / priorvars + nobj * np.log(priorvars)) +
                                              (lnATA - np.log(priorvars)))
         return lndprior + summed_likelihood
+
+    def ln_metal_likelihood(self, alpha, var, X_Ys, invariants):
+        """Compute the un-marginalized likelihood for our model."""
+        mu = np.poly1d(alpha)(invariants)
+        return ln_normal(X_Ys, mu, var).sum()
 
     def get_energy(self, par_dict):
         z = self._z + par_dict['sun_z']
@@ -118,7 +174,15 @@ class Model:
         ln_l = 0.
         for abundance_name in self.abundance_names:
             metals = self.element_data[abundance_name]
-            ln_l += self.ln_metal_likelihood(metals, invariants)
+
+            if self.marginalize:
+                ln_l += self.ln_metal_marginal_likelihood(metals, invariants)
+
+            else:
+                alpha = par_dict['alpha'][abundance_name]
+                lnvar = par_dict['lnvar'][abundance_name]
+                ln_l += self.ln_metal_likelihood(alpha, np.exp(lnvar),
+                                                 metals, invariants)
 
         return ln_l
 
