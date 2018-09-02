@@ -21,7 +21,6 @@ import astropy.units as u
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
-import pickle
 import os.path
 from pyia import GaiaData
 from integrate_orbits import *
@@ -35,19 +34,6 @@ if _path not in sys.path:
     sys.path.append(_path)
 from chemtrails.data import (get_label_from_abundancename, get_abundance_data,
                              load_nominal_galah)
-
-def pickle_to_file(thing, name):
-    print("pickle_to_file(): writing {}".format(name))
-    outfile = open(name, "wb")
-    pickle.dump(thing, outfile)
-    return outfile.close()
-
-def unpickle_from_file(name):
-    print("unpickle_from_file(): reading {}".format(name))
-    outfile = open(name, "rb")
-    thing = pickle.load(outfile)
-    outfile.close()
-    return thing
 
 def hogg_savefig(thing, name):
     print("hogg_savefig(): saving figure {}".format(name))

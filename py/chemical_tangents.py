@@ -20,6 +20,20 @@ import astropy.units as u
 import emcee
 import corner
 from integrate_orbits import *
+import pickle
+
+def pickle_to_file(thing, name):
+    print("pickle_to_file(): writing {}".format(name))
+    outfile = open(name, "wb")
+    pickle.dump(thing, outfile)
+    return outfile.close()
+
+def unpickle_from_file(name):
+    print("unpickle_from_file(): reading {}".format(name))
+    outfile = open(name, "rb")
+    thing = pickle.load(outfile)
+    outfile.close()
+    return thing
 
 def ln_like(qs, invariants, order=3, residuals=False):
     """
