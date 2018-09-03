@@ -3,13 +3,17 @@ from collections import OrderedDict
 from math import pi
 
 # Third-party
+import astropy.units as u
 import numpy as np
 from gala.potential import PotentialBase
+from gala.units import UnitSystem
 
 __all__ = ['sech2_potential', 'sech2_gradient', 'sech2_density',
            'Sech2Potential',
            'uniform_potential', 'uniform_gradient', 'uniform_density',
            'UniformPotential']
+
+usys = UnitSystem(u.pc, u.Myr, u.Msun, u.radian)
 
 # ------------------------------------------------------------------------------
 # Sech^2 density stuff
@@ -33,6 +37,9 @@ class Sech2Potential(PotentialBase):
 
         params['hz'] = hz
         ptypes['hz'] = 'length'
+
+        if units is None:
+            units = usys
 
         super(Sech2Potential, self).__init__(parameters=params,
                                              parameter_physical_types=ptypes,
@@ -77,6 +84,9 @@ class UniformPotential(PotentialBase):
 
         params['rho0'] = rho0
         ptypes['rho0'] = 'mass density'
+
+        if units is None:
+            units = usys
 
         super(UniformPotential, self).__init__(parameters=params,
                                                parameter_physical_types=ptypes,
