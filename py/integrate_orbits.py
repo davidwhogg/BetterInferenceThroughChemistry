@@ -100,6 +100,10 @@ def leapfrog_full_circle(vmax, dt, acceleration, pars):
         assert phis is not None
     return zs[:t+2], vs[:t+2], phis
 
+def integrate_to_phi(phi, vmax, dt, acceleration, pars):
+    zs, vs, phis = leapfrog_full_circle(vmax, dt, acceleration, pars)
+    return np.interp(phi, phis, zs), np.interp(phi, phis, vs)
+
 def leapfrog_back_to_midplane(z, v, timestep, acceleration, pars):
     """
     bugs:
