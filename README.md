@@ -18,3 +18,4 @@ Copyright 2018 the authors.
 - pyia
 - emcee
 - corner
+- foo
