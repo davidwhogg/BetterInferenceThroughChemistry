@@ -9,10 +9,10 @@ __all__ = ['load_nominal_galah', 'load_nominal_apogee',
            'get_catalog_name', 'get_abundance_data']
 
 def load_nominal_galah(filename,
-                       zlim=2*u.kpc, vlim=75*u.km/u.s,
-                       teff_lim=[4000., 6500]*u.K,
+                       zlim=1*u.kpc, vzlim=100*u.km/u.s, dlim=1.5*u.kpc,
+                       teff_lim=[3500., 6000]*u.K,
                        logg_lim=[-0.5, 3.5],
-                       parallax_snr_lim=10):
+                       spec_snr_lim=16, parallax_snr_lim=8):
     """TODO
 
     Parameters
@@ -29,29 +29,35 @@ def load_nominal_galah(filename,
     """
 
     # read data and cut
-    galah = GaiaData(filename)
-    galah = galah[np.isfinite(galah.parallax_error)]
+    g = GaiaData(filename)
+    g = g[np.isfinite(g.parallax_error)]
 
     if parallax_snr_lim is not None:
-        plx_snr = galah.parallax / galah.parallax_error
-        galah = galah[plx_snr > parallax_snr_lim]
+        plx_snr = g.parallax / g.parallax_error
+        g = g[plx_snr > parallax_snr_lim]
 
-    galah = galah[(galah.teff > teff_lim[0]) & (galah.teff < teff_lim[1])]
-    galah = galah[(galah.logg > logg_lim[0]) & (galah.logg < logg_lim[1])]
+    if spec_snr_lim is not None:
+        g = g[(g.snr_c1 > spec_snr_lim) &
+              (g.snr_c2 > spec_snr_lim) &
+              (g.snr_c3 > spec_snr_lim)]
+
+    g = g[(g.teff > teff_lim[0]) & (g.teff < teff_lim[1])]
+    g = g[(g.logg > logg_lim[0]) & (g.logg < logg_lim[1])]
 
     # make coordinates
-    c = galah.get_skycoord(radial_velocity=galah.rv_synt)
+    c = g.get_skycoord(radial_velocity=g.rv_synt)
     galcen = c.transform_to(coord.Galactocentric(z_sun=0*u.pc))
 
     zs = galcen.z.to(u.pc)
     vs = galcen.v_z.to(u.km/u.s)
 
     # trim on coordinates
-    inbox = (zs / zlim) ** 2 + (vs / vlim) ** 2 < 1.
-    galah = galah[inbox]
-    galcen = galcen[inbox]
+    mask = np.isfinite(g.parallax) & (g.distance < dlim)
+    mask &= (zs / zlim) ** 2 + (vs / vzlim) ** 2 < 1.
+    g = g[mask]
+    galcen = galcen[mask]
 
-    return galah, galcen
+    return g, galcen
 
 
 def load_nominal_apogee(filename,

@@ -63,6 +63,10 @@ def make_catalog(N, pars):
             vzs[n] = vz
             abunds[n] = abundance
             n += 1
+
+            if n % 128 == 0:
+                print(n)
+                
     return poss, vzs, abunds
 
 def write_catalog():
@@ -77,7 +81,7 @@ if __name__ == "__main__":
     poss, vzs, abunds = make_catalog(4096 * 4, pars)
     zs = poss[:, 2] / pc
     vzs = vzs / (km / s)
-    
+
     nx, ny = 1, 1
     fig, ax = plt.subplots(ny, nx, figsize=(nx * 4, ny * 4), sharex=True, sharey=True)
     ax.text(0.02, 0.98, "fake", ha="left", va="top", transform=ax.transAxes)

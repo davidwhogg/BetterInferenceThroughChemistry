@@ -18,8 +18,9 @@ def ln_normal(x, mu, var):
 class Model:
 
     def __init__(self, galcen, element_data, abundance_names,
-                 metals_deg=3, usys=None, enforce_finite=True,
-                 marginalize=True):
+                 frozen_pars=None, usys=None,
+                 metals_deg=3,
+                 marginalize=None):
         """TODO
 
         Parameters
@@ -40,7 +41,12 @@ class Model:
             usys = UnitSystem(u.pc, u.Myr, u.Msun, u.radian, u.km/u.s)
         self.usys = usys
 
-        self.marginalize = marginalize
+        self.marginalize_all = False
+        self.marginalize_alpha = False
+        if marginalize == 'all':
+            self.marginalize_all = True
+        elif marginalize == 'alpha':
+            self.marginalize_alpha = True
 
         # kinematic and abundance data
         self.galcen = galcen
@@ -51,14 +57,18 @@ class Model:
             self.element_data[name] = get_abundance_data(element_data, name)
         self.abundance_names = abundance_names
 
-        if enforce_finite:
-            elem_mask = np.ones(len(galcen), dtype=bool)
-            for name in abundance_names:
-                elem_mask &= np.isfinite(self.element_data[name])
+        # if enforce_finite:
+        #     elem_mask = np.ones(len(galcen), dtype=bool)
+        #     for name in abundance_names:
+        #         elem_mask &= np.isfinite(self.element_data[name])
+        #
+        #     for name in abundance_names:
+        #         self.element_data[name] = self.element_data[name][elem_mask]
+        #     self.galcen = self.galcen[elem_mask]
 
-            for name in abundance_names:
-                self.element_data[name] = self.element_data[name][elem_mask]
-            self.galcen = self.galcen[elem_mask]
+        if frozen_pars is None:
+            frozen_pars = dict()
+        self.frozen_pars = frozen_pars
 
         # Convert data to units we expect
         self._z = self.galcen.z.decompose(self.usys).value
@@ -74,13 +84,22 @@ class Model:
 
     def unpack_pars(self, p):
         par_dict = dict()
-        par_dict['sun_z'] = p[0]
-        par_dict['sun_vz'] = p[1]
-        par_dict['lnsigma'] = p[2]
-        par_dict['lnhz'] = p[3]
 
-        if not self.marginalize:
-            p_i = 4 # next index after p[3], see above
+        p_i = 0
+
+        for par in ['sun_z', 'sun_vz', 'lnsigma', 'lnhz']:
+            par_dict[par] = self.frozen_pars.get(par, p[p_i])
+            if par not in self.frozen_pars:
+                p_i += 1
+
+        if self.marginalize_alpha:
+            par_dict['lnvar'] = dict()
+            for k, name in enumerate(self.abundance_names):
+                lnvar = p[p_i]
+                par_dict['lnvar'][name] = lnvar
+                p_i += 1
+
+        elif not self.marginalize_all:
             par_dict['alpha'] = dict()
             par_dict['lnvar'] = dict()
             for k, name in enumerate(self.abundance_names):
@@ -99,26 +118,30 @@ class Model:
 
         lp = 0.
 
-        if not -128 < par_dict['sun_z'] < 128: # pc
-            return -np.inf
+        if 'sun_z' not in self.frozen_pars: # pc
+            if not -128 < par_dict['sun_z'] < 128:
+                return -np.inf
 
-        if not -32 < par_dict['sun_vz'] < 32: # pc/Myr
-            return -np.inf
+        if 'sun_vz' not in self.frozen_pars: # pc/Myr
+            if not -32 < par_dict['sun_vz'] < 32:
+                return -np.inf
 
-        if not np.log(16) < par_dict['lnsigma'] < np.log(256): # ln(Msun/pc^2)
-            return -np.inf
+        if 'lnsigma' not in self.frozen_pars: # ln(Msun/pc^2)
+            if not np.log(16) < par_dict['lnsigma'] < np.log(256):
+                return -np.inf
 
-        if not np.log(32) < par_dict['lnhz'] < np.log(1024): # ln(pc)
-            return -np.inf
+        if 'lnhz' not in self.frozen_pars: # ln(pc)
+            if not np.log(32) < par_dict['lnhz'] < np.log(512):
+                return -np.inf
 
-        if not self.marginalize:
+        if self.marginalize_alpha or not self.marginalize_all:
             for abundance_name in self.abundance_names:
-                # TODO: prior on alpha??
-                # alpha = par_dict['alpha'][abundance_name]
                 lnvar = par_dict['lnvar'][abundance_name]
-
                 if not 2*np.log(0.04) < lnvar < 2*np.log(0.5):
                     return -np.inf
+
+        # TODO: prior on alpha??
+        # alpha = par_dict['alpha'][abundance_name]
 
         return lp
 
@@ -135,11 +158,9 @@ class Model:
 
         return resid, ATA
 
-    def ln_metal_marginal_likelihood(self, X_Ys, invariants):
-        # TODO: hard-coded
-        # priorvars = np.exp(np.arange(np.log(0.02),
-        #                                np.log(0.25),
-        #                                np.log(1.01)))
+    def ln_metal_fully_marginal_likelihood(self, X_Ys, invariants):
+        """ TODO: """
+        # TODO: hard-coded variance values!
         priorvars = np.logspace(np.log10(0.1**2), np.log10(0.5**2), 1024)
         lndprior = -np.log(len(priorvars))
 
@@ -152,8 +173,29 @@ class Model:
                                              (lnATA - np.log(priorvars)))
         return lndprior + summed_likelihood
 
+    def ln_metal_marginal_likelihood(self, var, X_Ys, invariants):
+        """ TODO: this currently evaulates incorrectly!!
+
+        Parameters
+        ----------
+        var : numeric
+        X_Ys : `numpy.ndarray`
+        invariants : `numpy.ndarray`
+        """
+        resid, ATA = self.get_residual(X_Ys, invariants)
+        _, lnATA = np.linalg.slogdet(ATA)
+        return -0.5 * (np.sum(resid**2) / var + np.log(2*np.pi * var) + lnATA)
+
     def ln_metal_likelihood(self, alpha, var, X_Ys, invariants):
-        """Compute the un-marginalized likelihood for our model."""
+        """Compute the un-marginalized likelihood for our model.
+
+        Parameters
+        ----------
+        alpha : iterable
+        var : numeric
+        X_Ys : `numpy.ndarray`
+        invariants : `numpy.ndarray`
+        """
         mu = np.poly1d(alpha)(invariants)
         return ln_normal(X_Ys, mu, var).sum()
 
@@ -168,15 +210,22 @@ class Model:
         return Es
 
     def ln_likelihood(self, par_dict):
-        Es = self.get_energy(par_dict)
+        # Es = self.get_energy(par_dict).value / 1000.
+        Es = np.log(self.get_energy(par_dict) / 1000.)
         invariants = Es - np.mean(Es)
 
         ln_l = 0.
         for abundance_name in self.abundance_names:
             metals = self.element_data[abundance_name]
 
-            if self.marginalize:
-                ln_l += self.ln_metal_marginal_likelihood(metals, invariants)
+            if self.marginalize_alpha:
+                lnvar = par_dict['lnvar'][abundance_name]
+                ln_l += self.ln_metal_marginal_likelihood(np.exp(lnvar),
+                                                          metals, invariants)
+
+            elif self.marginalize_all:
+                ln_l += self.ln_metal_fully_marginal_likelihood(metals,
+                                                                invariants)
 
             else:
                 alpha = par_dict['alpha'][abundance_name]
